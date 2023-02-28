@@ -191,16 +191,13 @@ func TestProcessBackupValidationFailures(t *testing.T) {
 				fakeClient = velerotest.NewFakeControllerRuntimeClient(t)
 			}
 
-			c := &backupController{
-				genericController:      newGenericController("backup-test", logger),
-				discoveryHelper:        discoveryHelper,
-				client:                 clientset.VeleroV1(),
-				lister:                 sharedInformers.Velero().V1().Backups().Lister(),
-				kbClient:               fakeClient,
-				snapshotLocationLister: sharedInformers.Velero().V1().VolumeSnapshotLocations().Lister(),
-				defaultBackupLocation:  defaultBackupLocation.Name,
-				clock:                  &clocks.RealClock{},
-				formatFlag:             formatFlag,
+			c := &backupReconciler{
+				logger:                logger,
+				discoveryHelper:       discoveryHelper,
+				kbClient:              fakeClient,
+				defaultBackupLocation: defaultBackupLocation.Name,
+				clock:                 &clocks.RealClock{},
+				formatFlag:            formatFlag,
 			}
 
 			require.NotNil(t, test.backup)
@@ -429,7 +426,7 @@ func TestDefaultBackupTTL(t *testing.T) {
 			} else {
 				fakeClient = velerotest.NewFakeControllerRuntimeClient(t)
 			}
-			c := &BackupRepoReconciler{
+			c := &backupReconciler{
 				logger:           logger,
 				discoveryHelper:  discoveryHelper,
 				kbClient:         fakeClient,
