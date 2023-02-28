@@ -35,8 +35,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/version"
+	clocks "k8s.io/utils/clock"
+	testclocks "k8s.io/utils/clock/testing"
 	ctrl "sigs.k8s.io/controller-runtime"
 	kbclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -190,13 +191,16 @@ func TestProcessBackupValidationFailures(t *testing.T) {
 				fakeClient = velerotest.NewFakeControllerRuntimeClient(t)
 			}
 
-			c := &backupReconciler{
-				logger:                logger,
-				discoveryHelper:       discoveryHelper,
-				kbClient:              fakeClient,
-				defaultBackupLocation: defaultBackupLocation.Name,
-				clock:                 &clock.RealClock{},
-				formatFlag:            formatFlag,
+			c := &backupController{
+				genericController:      newGenericController("backup-test", logger),
+				discoveryHelper:        discoveryHelper,
+				client:                 clientset.VeleroV1(),
+				lister:                 sharedInformers.Velero().V1().Backups().Lister(),
+				kbClient:               fakeClient,
+				snapshotLocationLister: sharedInformers.Velero().V1().VolumeSnapshotLocations().Lister(),
+				defaultBackupLocation:  defaultBackupLocation.Name,
+				clock:                  &clocks.RealClock{},
+				formatFlag:             formatFlag,
 			}
 
 			require.NotNil(t, test.backup)
@@ -258,7 +262,7 @@ func TestBackupLocationLabel(t *testing.T) {
 				discoveryHelper:       discoveryHelper,
 				kbClient:              fakeClient,
 				defaultBackupLocation: test.backupLocation.Name,
-				clock:                 &clock.RealClock{},
+				clock:                 &clocks.RealClock{},
 				formatFlag:            formatFlag,
 			}
 
@@ -353,7 +357,7 @@ func Test_prepareBackupRequest_BackupStorageLocation(t *testing.T) {
 				defaultBackupLocation: defaultBackupLocation,
 				kbClient:              fakeClient,
 				defaultBackupTTL:      defaultBackupTTL.Duration,
-				clock:                 clock.NewFakeClock(now),
+				clock:                 testclocks.NewFakeClock(now),
 				formatFlag:            formatFlag,
 			}
 
@@ -425,12 +429,12 @@ func TestDefaultBackupTTL(t *testing.T) {
 			} else {
 				fakeClient = velerotest.NewFakeControllerRuntimeClient(t)
 			}
-			c := &backupReconciler{
+			c := &BackupRepoReconciler{
 				logger:           logger,
 				discoveryHelper:  discoveryHelper,
 				kbClient:         fakeClient,
 				defaultBackupTTL: defaultBackupTTL.Duration,
-				clock:            clock.NewFakeClock(now),
+				clock:            testclocks.NewFakeClock(now),
 				formatFlag:       formatFlag,
 			}
 
@@ -529,7 +533,7 @@ func TestDefaultVolumesToResticDeprecation(t *testing.T) {
 				logger:                   logger,
 				discoveryHelper:          discoveryHelper,
 				kbClient:                 fakeClient,
-				clock:                    &clock.RealClock{},
+				clock:                    &clocks.RealClock{},
 				formatFlag:               formatFlag,
 				defaultVolumesToFsBackup: test.globalVal,
 			}
@@ -1030,7 +1034,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 				defaultVolumesToFsBackup: test.defaultVolumesToFsBackup,
 				backupTracker:            NewBackupTracker(),
 				metrics:                  metrics.NewServerMetrics(),
-				clock:                    clock.NewFakeClock(now),
+				clock:                    testclocks.NewFakeClock(now),
 				newPluginManager:         func(logrus.FieldLogger) clientmgmt.Manager { return pluginManager },
 				backupStoreGetter:        NewFakeSingleObjectBackupStoreGetter(backupStore),
 				backupper:                backupper,

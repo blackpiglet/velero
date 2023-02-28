@@ -65,6 +65,7 @@ import (
 	"github.com/vmware-tanzu/velero/pkg/util/collections"
 	"github.com/vmware-tanzu/velero/pkg/util/filesystem"
 	"github.com/vmware-tanzu/velero/pkg/util/kube"
+	. "github.com/vmware-tanzu/velero/pkg/util/results"
 	"github.com/vmware-tanzu/velero/pkg/volume"
 )
 
@@ -737,17 +738,6 @@ func (ctx *restoreContext) getApplicableActions(groupResource schema.GroupResour
 	return actions
 }
 
-func (ctx *restoreContext) getApplicableItemSnapshotters(groupResource schema.GroupResource, namespace string) []framework.ItemSnapshotterResolvedAction {
-	var actions []framework.ItemSnapshotterResolvedAction
-	for _, action := range ctx.itemSnapshotterActions {
-		if action.ShouldUse(groupResource, namespace, nil, ctx.log) {
-			actions = append(actions, action)
-		}
-	}
-
-	return actions
-}
-
 func (ctx *restoreContext) shouldRestore(name string, pvClient client.Dynamic) (bool, error) {
 	pvLogger := ctx.log.WithField("pvName", name)
 
@@ -1405,6 +1395,24 @@ func (ctx *restoreContext) restoreItem(obj *unstructured.Unstructured, groupReso
 		}
 	}
 
+	// restore the managedFields
+	withoutManagedFields := createdObj.DeepCopy()
+	createdObj.SetManagedFields(obj.GetManagedFields())
+	patchBytes, err := generatePatch(withoutManagedFields, createdObj)
+	if err != nil {
+		ctx.log.Errorf("error generating patch for managed fields %s: %v", kube.NamespaceAndName(obj), err)
+		errs.Add(namespace, err)
+		return warnings, errs
+	}
+	if patchBytes != nil {
+		if _, err = resourceClient.Patch(name, patchBytes); err != nil {
+			ctx.log.Errorf("error patch for managed fields %s: %v", kube.NamespaceAndName(obj), err)
+			errs.Add(namespace, err)
+			return warnings, errs
+		}
+		ctx.log.Infof("the managed fields for %s is patched", kube.NamespaceAndName(obj))
+	}
+
 	if groupResource == kuberesource.Pods {
 		pod := new(v1.Pod)
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), pod); err != nil {
@@ -1704,8 +1712,8 @@ func resetMetadata(obj *unstructured.Unstructured) (*unstructured.Unstructured, 
 
 	for k := range metadata {
 		switch k {
-		case "name", "namespace", "labels", "annotations":
-		default:
+		case "generateName", "selfLink", "uid", "resourceVersion", "generation", "creationTimestamp", "deletionTimestamp",
+			"deletionGracePeriodSeconds", "ownerReferences":
 			delete(metadata, k)
 		}
 	}

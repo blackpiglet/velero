@@ -31,6 +31,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,8 +40,8 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
+	clocks "k8s.io/utils/clock"
 
-	"github.com/vmware-tanzu/velero/pkg/util/csi"
 	"github.com/vmware-tanzu/velero/pkg/util/kube"
 
 	snapshotv1api "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
@@ -58,9 +59,11 @@ import (
 	"github.com/vmware-tanzu/velero/pkg/plugin/framework"
 	"github.com/vmware-tanzu/velero/pkg/util/boolptr"
 	"github.com/vmware-tanzu/velero/pkg/util/collections"
+	"github.com/vmware-tanzu/velero/pkg/util/csi"
 	"github.com/vmware-tanzu/velero/pkg/util/encode"
 	kubeutil "github.com/vmware-tanzu/velero/pkg/util/kube"
 	"github.com/vmware-tanzu/velero/pkg/util/logging"
+	"github.com/vmware-tanzu/velero/pkg/util/results"
 	"github.com/vmware-tanzu/velero/pkg/volume"
 
 	corev1api "k8s.io/api/core/v1"
@@ -78,7 +81,7 @@ type backupReconciler struct {
 	discoveryHelper           discovery.Helper
 	backupper                 pkgbackup.Backupper
 	kbClient                  kbclient.Client
-	clock                     clock.Clock
+	clock                     clocks.WithTickerAndDelayedExecution
 	backupLogLevel            logrus.Level
 	newPluginManager          func(logrus.FieldLogger) clientmgmt.Manager
 	backupTracker             BackupTracker
@@ -429,11 +432,12 @@ func (b *backupReconciler) prepareBackupRequest(backup *velerov1api.Backup, logg
 
 // validateAndGetSnapshotLocations gets a collection of VolumeSnapshotLocation objects that
 // this backup will use (returned as a map of provider name -> VSL), and ensures:
-// - each location name in .spec.volumeSnapshotLocations exists as a location
-// - exactly 1 location per provider
-// - a given provider's default location name is added to .spec.volumeSnapshotLocations if one
-//   is not explicitly specified for the provider (if there's only one location for the provider,
-//   it will automatically be used)
+//   - each location name in .spec.volumeSnapshotLocations exists as a location
+//   - exactly 1 location per provider
+//   - a given provider's default location name is added to .spec.volumeSnapshotLocations if one
+//     is not explicitly specified for the provider (if there's only one location for the provider,
+//     it will automatically be used)
+//
 // if backup has snapshotVolume disabled then it returns empty VSL
 func (b *backupReconciler) validateAndGetSnapshotLocations(backup *velerov1api.Backup) (map[string]*velerov1api.VolumeSnapshotLocation, []string) {
 	errors := []string{}
@@ -554,7 +558,7 @@ func (b *backupReconciler) runBackup(backup *pkgbackup.Request) error {
 	logger := logging.DefaultLogger(b.backupLogLevel, b.formatFlag)
 	logger.Out = io.MultiWriter(os.Stdout, gzippedLogFile)
 
-	logCounter := logging.NewLogCounterHook()
+	logCounter := logging.NewLogHook()
 	logger.Hooks.Add(logCounter)
 
 	backupLog := logger.WithField(Backup, kubeutil.NamespaceAndName(backup))
@@ -676,6 +680,13 @@ func (b *backupReconciler) runBackup(backup *pkgbackup.Request) error {
 
 	recordBackupMetrics(backupLog, backup.Backup, backupFile, b.metrics)
 
+	backupWarnings := logCounter.GetEntries(logrus.WarnLevel)
+	backupErrors := logCounter.GetEntries(logrus.ErrorLevel)
+	results := map[string]results.Result{
+		"warnings": backupWarnings,
+		"errors":   backupErrors,
+	}
+
 	if err := gzippedLogFile.Close(); err != nil {
 		b.logger.WithField(Backup, kubeutil.NamespaceAndName(backup)).WithError(err).Error("error closing gzippedLogFile")
 	}
@@ -701,7 +712,7 @@ func (b *backupReconciler) runBackup(backup *pkgbackup.Request) error {
 		return err
 	}
 
-	if errs := persistBackup(backup, backupFile, logFile, backupStore, volumeSnapshots, volumeSnapshotContents, volumeSnapshotClasses); len(errs) > 0 {
+	if errs := persistBackup(backup, backupFile, logFile, backupStore, volumeSnapshots, volumeSnapshotContents, volumeSnapshotClasses, results); len(errs) > 0 {
 		fatalErrs = append(fatalErrs, errs...)
 	}
 
@@ -752,6 +763,7 @@ func persistBackup(backup *pkgbackup.Request,
 	csiVolumeSnapshots []snapshotv1api.VolumeSnapshot,
 	csiVolumeSnapshotContents []snapshotv1api.VolumeSnapshotContent,
 	csiVolumesnapshotClasses []snapshotv1api.VolumeSnapshotClass,
+	results map[string]results.Result,
 ) []error {
 	persistErrs := []error{}
 	backupJSON := new(bytes.Buffer)
@@ -790,6 +802,11 @@ func persistBackup(backup *pkgbackup.Request,
 		persistErrs = append(persistErrs, errs...)
 	}
 
+	backupResult, errs := encodeToJSONGzip(results, "backup results")
+	if errs != nil {
+		persistErrs = append(persistErrs, errs...)
+	}
+
 	if len(persistErrs) > 0 {
 		// Don't upload the JSON files or backup tarball if encoding to json fails.
 		backupJSON = nil
@@ -799,6 +816,7 @@ func persistBackup(backup *pkgbackup.Request,
 		csiSnapshotJSON = nil
 		csiSnapshotContentsJSON = nil
 		csiSnapshotClassesJSON = nil
+		backupResult = nil
 	}
 
 	backupInfo := persistence.BackupInfo{
@@ -806,6 +824,7 @@ func persistBackup(backup *pkgbackup.Request,
 		Metadata:                  backupJSON,
 		Contents:                  backupContents,
 		Log:                       backupLog,
+		BackupResults:             backupResult,
 		PodVolumeBackups:          podVolumeBackups,
 		VolumeSnapshots:           nativeVolumeSnapshots,
 		BackupResourceList:        backupResourceList,
@@ -887,7 +906,7 @@ func (b *backupReconciler) waitVolumeSnapshotReadyToUse(ctx context.Context,
 		eg.Go(func() error {
 			err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 				tmpVS := &snapshotv1api.VolumeSnapshot{}
-				err := b.kbClient.Get(ctx, kbclient.ObjectKey{volumeSnapshot.Namespace, volumeSnapshot.Name}, tmpVS)
+				err := b.kbClient.Get(ctx, kbclient.ObjectKey{Namespace: volumeSnapshot.Namespace, Name: volumeSnapshot.Name}, tmpVS)
 				if err != nil {
 					return false, errors.Wrapf(err, fmt.Sprintf("failed to get volumesnapshot %s/%s", volumeSnapshot.Namespace, volumeSnapshot.Name))
 				}

@@ -154,7 +154,12 @@ func (ib *itemBackupper) backupItem(logger logrus.FieldLogger, obj runtime.Unstr
 			// any volumes that use a PVC that we've already backed up (this would be in a read-write-many scenario,
 			// where it's been backed up from another pod), since we don't need >1 backup per PVC.
 			for _, volume := range podvolume.GetVolumesByPod(pod, boolptr.IsSetToTrue(ib.backupRequest.Spec.DefaultVolumesToFsBackup)) {
-				if found, pvcName := ib.podVolumeSnapshotTracker.HasPVCForPodVolume(pod, volume); found {
+				// track the volumes that are PVCs using the PVC snapshot tracker, so that when we backup PVCs/PVs
+				// via an item action in the next step, we don't snapshot PVs that will have their data backed up
+				// with pod volume backup.
+				ib.podVolumeSnapshotTracker.Track(pod, volume)
+
+				if found, pvcName := ib.podVolumeSnapshotTracker.TakenForPodVolume(pod, volume); found {
 					log.WithFields(map[string]interface{}{
 						"podVolume": volume,
 						"pvcName":   pvcName,
@@ -164,11 +169,6 @@ func (ib *itemBackupper) backupItem(logger logrus.FieldLogger, obj runtime.Unstr
 
 				pvbVolumes = append(pvbVolumes, volume)
 			}
-
-			// track the volumes that are PVCs using the PVC snapshot tracker, so that when we backup PVCs/PVs
-			// via an item action in the next step, we don't snapshot PVs that will have their data backed up
-			// with pod volume backup.
-			ib.podVolumeSnapshotTracker.Track(pod, pvbVolumes)
 		}
 	}
 
@@ -211,6 +211,11 @@ func (ib *itemBackupper) backupItem(logger logrus.FieldLogger, obj runtime.Unstr
 
 		ib.backupRequest.PodVolumeBackups = append(ib.backupRequest.PodVolumeBackups, podVolumeBackups...)
 		backupErrs = append(backupErrs, errs...)
+
+		// Mark the volumes that has been processed by pod volume backup as Taken in the tracker.
+		for _, pvb := range podVolumeBackups {
+			ib.podVolumeSnapshotTracker.Take(pod, pvb.Spec.Volume)
+		}
 	}
 
 	log.Debug("Executing post hooks")

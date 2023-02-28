@@ -27,20 +27,15 @@ import (
 	"github.com/vmware-tanzu/velero/pkg/buildinfo"
 )
 
-func buildConfigFromFlags(context, kubeconfigPath string, precedence []string) (*rest.Config, error) {
-	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath, Precedence: precedence},
-		&clientcmd.ConfigOverrides{
-			CurrentContext: context,
-		}).ClientConfig()
-}
-
 // Config returns a *rest.Config, using either the kubeconfig (if specified) or an in-cluster
 // configuration.
 func Config(kubeconfig, kubecontext, baseName string, qps float32, burst int) (*rest.Config, error) {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	loadingRules.ExplicitPath = kubeconfig
-	clientConfig, err := buildConfigFromFlags(kubecontext, kubeconfig, loadingRules.Precedence)
+	configOverrides := &clientcmd.ConfigOverrides{CurrentContext: kubecontext}
+	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
+
+	clientConfig, err := kubeConfig.ClientConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "error finding Kubernetes API server config in --kubeconfig, $KUBECONFIG, or in-cluster configuration")
 	}
