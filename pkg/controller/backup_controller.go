@@ -28,10 +28,14 @@ import (
 	"sync"
 	"time"
 
+	snapshotv1api "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
+	snapshotterClientSet "github.com/kubernetes-csi/external-snapshotter/client/v4/clientset/versioned"
+	snapshotv1listers "github.com/kubernetes-csi/external-snapshotter/client/v4/listers/volumesnapshot/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/vmware-tanzu/velero/pkg/util/kube"
 	"golang.org/x/sync/errgroup"
-
+	corev1api "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,10 +45,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clocks "k8s.io/utils/clock"
-
-	"github.com/vmware-tanzu/velero/pkg/util/kube"
-
-	snapshotv1api "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
+	kbclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/velero/internal/credentials"
 	"github.com/vmware-tanzu/velero/internal/storage"
@@ -65,10 +67,6 @@ import (
 	"github.com/vmware-tanzu/velero/pkg/util/logging"
 	"github.com/vmware-tanzu/velero/pkg/util/results"
 	"github.com/vmware-tanzu/velero/pkg/volume"
-
-	corev1api "k8s.io/api/core/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
-	kbclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -93,6 +91,8 @@ type backupReconciler struct {
 	metrics                   *metrics.ServerMetrics
 	backupStoreGetter         persistence.ObjectBackupStoreGetter
 	formatFlag                logging.Format
+	volumeSnapshotLister      snapshotv1listers.VolumeSnapshotLister
+	volumeSnapshotClient      snapshotterClientSet.Interface
 	credentialFileStore       credentials.FileStore
 }
 
@@ -113,6 +113,8 @@ func NewBackupReconciler(
 	metrics *metrics.ServerMetrics,
 	backupStoreGetter persistence.ObjectBackupStoreGetter,
 	formatFlag logging.Format,
+	volumeSnapshotLister snapshotv1listers.VolumeSnapshotLister,
+	volumeSnapshotClient snapshotterClientSet.Interface,
 	credentialStore credentials.FileStore,
 ) *backupReconciler {
 
@@ -134,6 +136,8 @@ func NewBackupReconciler(
 		metrics:                   metrics,
 		backupStoreGetter:         backupStoreGetter,
 		formatFlag:                formatFlag,
+		volumeSnapshotLister:      volumeSnapshotLister,
+		volumeSnapshotClient:      volumeSnapshotClient,
 		credentialFileStore:       credentialStore,
 	}
 	b.updateTotalBackupMetric()
@@ -887,15 +891,15 @@ func (b *backupReconciler) waitVolumeSnapshotReadyToUse(ctx context.Context,
 	interval := 5 * time.Second
 	volumeSnapshots := make([]snapshotv1api.VolumeSnapshot, 0)
 
-	tmpVSs := &snapshotv1api.VolumeSnapshotList{}
-	err := b.kbClient.List(ctx, tmpVSs, &kbclient.ListOptions{LabelSelector: label.NewSelectorForBackup(backupName)})
-	if err != nil {
-		b.logger.Error(err)
-		return volumeSnapshots, err
-	}
-
-	for _, vs := range tmpVSs.Items {
-		volumeSnapshots = append(volumeSnapshots, vs)
+	if b.volumeSnapshotLister != nil {
+		tmpVSs, err := b.volumeSnapshotLister.List(label.NewSelectorForBackup(backupName))
+		if err != nil {
+			b.logger.Error(err)
+			return volumeSnapshots, err
+		}
+		for _, vs := range tmpVSs {
+			volumeSnapshots = append(volumeSnapshots, *vs)
+		}
 	}
 
 	vsChannel := make(chan snapshotv1api.VolumeSnapshot, len(volumeSnapshots))
@@ -927,7 +931,7 @@ func (b *backupReconciler) waitVolumeSnapshotReadyToUse(ctx context.Context,
 		})
 	}
 
-	err = eg.Wait()
+	err := eg.Wait()
 
 	result := make([]snapshotv1api.VolumeSnapshot, 0)
 	length := len(vsChannel)
