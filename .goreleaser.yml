@@ -53,7 +53,7 @@ checksum:
   name_template: 'CHECKSUM'
 release:
   github:
-    owner: vmware-tanzu
+    owner: blackpiglet
     name: velero
   draft: true
   prerelease: auto
