@@ -194,10 +194,12 @@ func (c *PodVolumeRestoreReconciler) shouldProcess(ctx context.Context, log logr
 		return false, nil, err
 	}
 
-	if !isInitContainerRunning(pod) {
-		log.Debug("Pod is not running restore-wait init container, skip")
-		return false, nil, nil
-	}
+	/*
+		if !isInitContainerRunning(pod) {
+			log.Debug("Pod is not running restore-wait init container, skip")
+			return false, nil, nil
+		}
+	*/
 
 	return true, pod, nil
 }
