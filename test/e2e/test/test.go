@@ -19,7 +19,7 @@ package test
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"strings"
 	"time"
 
@@ -105,8 +105,7 @@ func (t *TestCase) Init() error {
 }
 
 func (t *TestCase) GenerateUUID() string {
-	rand.Seed(time.Now().UnixNano())
-	return fmt.Sprintf("%08d", rand.Intn(100000000))
+	return fmt.Sprintf("%08d", rand.IntN(100000000))
 }
 
 func (t *TestCase) CreateResources() error {
@@ -197,6 +196,10 @@ func (t *TestCase) GetTestCase() *TestCase {
 }
 
 func RunTestCase(test VeleroBackupRestoreTest) error {
+	if VeleroCfg.BailOut {
+		Skip("Skip test case because the BailOut flag is true.")
+	}
+
 	if test == nil {
 		return errors.New("No case should be tested")
 	}
@@ -214,26 +217,31 @@ func RunTestCase(test VeleroBackupRestoreTest) error {
 	fmt.Printf("CreateResources %s\n", time.Now().Format("2006-01-02 15:04:05"))
 	err := test.CreateResources()
 	if err != nil {
+		VeleroCfg.BailOut = true
 		return err
 	}
 	fmt.Printf("Backup %s\n", time.Now().Format("2006-01-02 15:04:05"))
 	err = test.Backup()
 	if err != nil {
+		VeleroCfg.BailOut = true
 		return err
 	}
 	fmt.Printf("Destroy %s\n", time.Now().Format("2006-01-02 15:04:05"))
 	err = test.Destroy()
 	if err != nil {
+		VeleroCfg.BailOut = true
 		return err
 	}
 	fmt.Printf("Restore %s\n", time.Now().Format("2006-01-02 15:04:05"))
 	err = test.Restore()
 	if err != nil {
+		VeleroCfg.BailOut = true
 		return err
 	}
 	fmt.Printf("Verify %s\n", time.Now().Format("2006-01-02 15:04:05"))
 	err = test.Verify()
 	if err != nil {
+		VeleroCfg.BailOut = true
 		return err
 	}
 	fmt.Printf("Finish run test %s\n", time.Now().Format("2006-01-02 15:04:05"))

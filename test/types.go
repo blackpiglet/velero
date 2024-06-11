@@ -108,6 +108,7 @@ type VeleroConfig struct {
 	StandbyCLSServiceAccountName      string
 	ServiceAccountNameToInstall       string
 	EKSPolicyARN                      string
+	BailOut                           bool // Flag to indicate E2E should skip all pending test cases
 }
 
 type VeleroCfgInPerf struct {

@@ -3,7 +3,7 @@ package schedule
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"strings"
 	"time"
 
@@ -117,7 +117,7 @@ func (n *ScheduleBackupCreation) Backup() error {
 				Expect(err).To(Succeed())
 			}
 			if i == n.verifyTimes-1 {
-				backupInfo := backupsInfo[rand.Intn(len(backupsInfo))]
+				backupInfo := backupsInfo[rand.IntN(len(backupsInfo))]
 				n.randBackupName = strings.Split(backupInfo, ",")[0]
 			}
 		}
