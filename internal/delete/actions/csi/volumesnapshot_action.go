@@ -85,6 +85,7 @@ func (p *volumeSnapshotDeleteItemAction) Execute(
 		err := csi.SetVolumeSnapshotContentDeletionPolicy(
 			*vs.Status.BoundVolumeSnapshotContentName,
 			p.crClient,
+			snapshotv1api.VolumeSnapshotContentDelete,
 		)
 		if err != nil && !apierrors.IsNotFound(err) {
 			return errors.Wrapf(

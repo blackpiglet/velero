@@ -1379,12 +1379,14 @@ func TestSetVolumeSnapshotContentDeletionPolicy(t *testing.T) {
 	testCases := []struct {
 		name         string
 		inputVSCName string
+		policy       snapshotv1api.DeletionPolicy
 		objs         []runtime.Object
 		expectError  bool
 	}{
 		{
 			name:         "should update DeletionPolicy of a VSC from retain to delete",
 			inputVSCName: "retainVSC",
+			policy:       snapshotv1api.VolumeSnapshotContentDelete,
 			objs: []runtime.Object{
 				&snapshotv1api.VolumeSnapshotContent{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1400,6 +1402,7 @@ func TestSetVolumeSnapshotContentDeletionPolicy(t *testing.T) {
 		{
 			name:         "should be a no-op updating if DeletionPolicy of a VSC is already Delete",
 			inputVSCName: "deleteVSC",
+			policy:       snapshotv1api.VolumeSnapshotContentDelete,
 			objs: []runtime.Object{
 				&snapshotv1api.VolumeSnapshotContent{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1415,6 +1418,7 @@ func TestSetVolumeSnapshotContentDeletionPolicy(t *testing.T) {
 		{
 			name:         "should update DeletionPolicy of a VSC with no DeletionPolicy",
 			inputVSCName: "nothingVSC",
+			policy:       snapshotv1api.VolumeSnapshotContentDelete,
 			objs: []runtime.Object{
 				&snapshotv1api.VolumeSnapshotContent{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1436,7 +1440,7 @@ func TestSetVolumeSnapshotContentDeletionPolicy(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeClient := velerotest.NewFakeControllerRuntimeClient(t, tc.objs...)
-			err := SetVolumeSnapshotContentDeletionPolicy(tc.inputVSCName, fakeClient)
+			err := SetVolumeSnapshotContentDeletionPolicy(tc.inputVSCName, fakeClient, tc.policy)
 			if tc.expectError {
 				assert.Error(t, err)
 			} else {
@@ -1450,7 +1454,7 @@ func TestSetVolumeSnapshotContentDeletionPolicy(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(
 					t,
-					snapshotv1api.VolumeSnapshotContentDelete,
+					tc.policy,
 					actual.Spec.DeletionPolicy,
 				)
 			}
@@ -1502,7 +1506,7 @@ func TestDeleteVolumeSnapshots(t *testing.T) {
 			backup := builder.ForBackup(velerov1api.DefaultNamespace, "backup-1").
 				DefaultVolumesToFsBackup(false).Result()
 
-			DeleteVolumeSnapshot(tc.vs, tc.vsc, backup, client, logger)
+			deleteVolumeSnapshot(tc.vs, tc.vsc, backup, client, logger)
 
 			vsList := new(snapshotv1api.VolumeSnapshotList)
 			err := client.List(

@@ -80,6 +80,7 @@ func (p *volumeSnapshotContentDeleteItemAction) Execute(
 	if err := csi.SetVolumeSnapshotContentDeletionPolicy(
 		snapCont.Name,
 		p.crClient,
+		snapshotv1api.VolumeSnapshotContentDelete,
 	); err != nil {
 		// #4764: Leave a warning when VolumeSnapshotContent cannot be found for deletion.
 		// Manual deleting VolumeSnapshotContent can cause this.
