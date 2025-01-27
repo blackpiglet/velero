@@ -530,7 +530,7 @@ func CleanupVolumeSnapshot(
 	}
 }
 
-func DeleteVolumeSnapshot(
+func DeleteReadyVolumeSnapshot(
 	vs snapshotv1api.VolumeSnapshot,
 	vsc snapshotv1api.VolumeSnapshotContent,
 	client crclient.Client,

@@ -835,16 +835,27 @@ func (t *RestoreVolumeInfoTracker) Result() []*RestoreVolumeInfo {
 			restoreSize = csiSnapshot.Status.RestoreSize.Value()
 		}
 		vscName := ""
+		snapshotHandle := ""
 		if csiSnapshot.Spec.Source.VolumeSnapshotContentName != nil {
 			vscName = *csiSnapshot.Spec.Source.VolumeSnapshotContentName
+
+			csiVSC := snapshotv1api.VolumeSnapshotContent{}
+			if err := t.client.Get(context.TODO(), kbclient.ObjectKey{Name: vscName}, &csiVSC); err != nil {
+				t.log.Warnf("Fail to get VSC %s: %s", vscName, err.Error())
+			} else if csiVSC.Status.SnapshotHandle != nil {
+				snapshotHandle = *csiVSC.Status.SnapshotHandle
+			} else {
+				t.log.Warnf("VSC %s doesn't have snapshot handle.", csiVSC.Name)
+			}
 		}
+
 		volumeInfo := &RestoreVolumeInfo{
 			PVCNamespace:      pvcNS,
 			PVCName:           pvcName,
 			SnapshotDataMoved: false,
 			RestoreMethod:     CSISnapshot,
 			CSISnapshotInfo: &CSISnapshotInfo{
-				SnapshotHandle: csiSnapshot.Annotations[velerov1api.VolumeSnapshotHandleAnnotation],
+				SnapshotHandle: snapshotHandle,
 				Size:           restoreSize,
 				Driver:         csiSnapshot.Annotations[velerov1api.DriverNameAnnotation],
 				VSCName:        vscName,
