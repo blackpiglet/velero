@@ -15,7 +15,7 @@ jobs:
           go-version-file: 'go.mod'
       - uses: 'docker/login-action@v3'
         with:
-          registry: 'vsphere-docker-dev-local.usw5.packages.broadcom.com' # or REGION.docker.pkg.dev
+          registry: 'vsphere-docker-dev-local.artifactory.vcfd.broadcom.net'
           username: '${{ secrets.JFROG_USER }}'
           password: '${{ secrets.JFROG_PASSWORD }}'
       # Only try to publish the container image from the root repo; forks don't have permission to do so and will always get failures.
