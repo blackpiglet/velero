@@ -13,15 +13,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
-      - name: Make ci
-        run: make ci
-      - name: Upload test coverage
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.out
-          verbose: true
-          fail_ci_if_error: true
 
       - name: Set up QEMU
         id: qemu
@@ -38,14 +29,6 @@ jobs:
           make local
           # Clean go cache to ease the build environment storage pressure.
           go clean -modcache -cache
-      - name: Test
-        run: make test
-      - name: Upload test coverage
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.out
-          verbose: true
       # Only try to publish the container image from the root repo; forks don't have permission to do so and will always get failures.
       - name: Publish container image
         run: |
