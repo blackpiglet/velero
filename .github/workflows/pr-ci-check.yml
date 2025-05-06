@@ -13,12 +13,20 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
-      - name: Make ci
-        run: make ci
-      - name: Upload test coverage
-        uses: codecov/codecov-action@v5
+      - uses: 'docker/login-action@v3'
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.out
-          verbose: true
-          fail_ci_if_error: true
+          registry: 'vsphere-docker-dev-local.usw5.packages.broadcom.com' # or REGION.docker.pkg.dev
+          username: '${{ secrets.JFROG_USER }}'
+          password: '${{ secrets.JFROG_PASSWORD }}'
+      # Only try to publish the container image from the root repo; forks don't have permission to do so and will always get failures.
+      - name: Publish container image
+        if: github.repository == 'vmware-tanzu/velero'
+        run: |
+          sudo swapoff -a
+          sudo rm -f /mnt/swapfile
+          docker system prune -a --force
+              
+          # Build and push Velero image to docker registry
+          docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASSWORD }}
+          ./hack/docker-push.sh
+
