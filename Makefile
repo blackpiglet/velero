@@ -34,11 +34,11 @@ REGISTRY ?= velero
 #        docker buildx create --name=velero-builder --driver=docker-container --bootstrap --use --config ./buildkitd.toml
 #      Refer to https://github.com/docker/buildx/issues/1370#issuecomment-1288516840 for more details
 INSECURE_REGISTRY ?= false
-GCR_REGISTRY ?= gcr.io/velero-gcp
+JFROG_REGISTRY ?= vsphere-docker-dev-local.usw5.packages.broadcom.com/vkd/velero
 
 # Image name
 IMAGE ?= $(REGISTRY)/$(BIN)
-GCR_IMAGE ?= $(GCR_REGISTRY)/$(BIN)
+JFROG_IMAGE ?= $(JFROG_REGISTRY)/$(BIN)
 
 # We allow the Dockerfile to be configurable to enable the use of custom Dockerfiles
 # that pull base images from different registries.
@@ -81,10 +81,10 @@ TAG_LATEST ?= false
 
 ifeq ($(TAG_LATEST), true)
 	IMAGE_TAGS ?= $(IMAGE):$(VERSION) $(IMAGE):latest
-	GCR_IMAGE_TAGS ?= $(GCR_IMAGE):$(VERSION) $(GCR_IMAGE):latest
+	JFROG_IMAGE_TAGS ?= $(JFROG_IMAGE):$(VERSION) $(JFROG_IMAGE):latest
 else
 	IMAGE_TAGS ?= $(IMAGE):$(VERSION)
-	GCR_IMAGE_TAGS ?= $(GCR_IMAGE):$(VERSION)
+	JFROG_IMAGE_TAGS ?= $(JFROG_IMAGE):$(VERSION)
 endif
 
 # check buildx is enabled only if docker is in path
@@ -116,7 +116,7 @@ CLI_PLATFORMS ?= linux-amd64 linux-arm linux-arm64 darwin-amd64 darwin-arm64 win
 BUILD_OUTPUT_TYPE ?= docker
 BUILD_OS ?= linux
 BUILD_ARCH ?= amd64
-BUILD_TAG_GCR ?= false
+BUILD_TAG_JFROG ?= false
 BUILD_WINDOWS_VERSION ?= ltsc2022
 
 ifeq ($(BUILD_OUTPUT_TYPE), docker)
@@ -134,8 +134,8 @@ ALL_OS_ARCH.windows = $(foreach os, $(filter windows,$(ALL_OS)), $(foreach arch,
 ALL_OS_ARCH = $(ALL_OS_ARCH.linux)$(ALL_OS_ARCH.windows)
 
 ALL_IMAGE_TAGS = $(IMAGE_TAGS)
-ifeq ($(BUILD_TAG_GCR), true)
-	ALL_IMAGE_TAGS += $(GCR_IMAGE_TAGS)
+ifeq ($(BUILD_TAG_JFROG), true)
+	ALL_IMAGE_TAGS += $(JFROG_IMAGE_TAGS)
 endif
 
 # set git sha and tree state

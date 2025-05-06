@@ -55,9 +55,9 @@ jobs:
       # Use the JSON key in secret to login gcr.io
       - uses: 'docker/login-action@v3'
         with:
-          registry: 'gcr.io' # or REGION.docker.pkg.dev
-          username: '_json_key'
-          password: '${{ secrets.GCR_SA_KEY }}'
+          registry: 'vsphere-docker-dev-local.usw5.packages.broadcom.com' # or REGION.docker.pkg.dev
+          username: '${{ secrets.JFROG_USER }}'
+          password: '${{ secrets.JFROG_PASSWORD }}'
       # Only try to publish the container image from the root repo; forks don't have permission to do so and will always get failures.
       - name: Publish container image
         if: github.repository == 'vmware-tanzu/velero'
