@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	snapshotv1api "github.com/kubernetes-csi/external-snapshotter/client/v7/apis/volumesnapshot/v1"
@@ -31,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -61,6 +63,32 @@ import (
 const (
 	backupResyncPeriod = time.Minute
 )
+
+var nonBackupNamespaceScopedResources = []string{
+	// Velero will not handle its own resources in backups.
+	"backups.velero.io",
+	"backuprepositories.velero.io",
+	"backupstoragelocations.velero.io",
+	"deletebackuprequests.velero.io",
+	"downloadrequest.velero.io",
+	"podvolumebackups.velero.io",
+	"podvolumerestores.velero.io",
+	"restores.velero.io",
+	"datauploads.velero.io",
+	"datadownloads.velero.io",
+
+	// CSI VolumeSnapshot and VolumeSnapshotContent are intermediate resources.
+	// Velero only handle the VS and VSC created during backup,
+	// not during resource collecting.
+	"volumesnapshots.snapshot.storage.k8s.io",
+}
+
+var nonBackupClusterScopedResources = []string{
+	// CSI VolumeSnapshot and VolumeSnapshotContent are intermediate resources.
+	// Velero only handle the VS and VSC created during backup,
+	// not during resource collecting.
+	"volumesnapshotcontents.snapshot.storage.k8s.io",
+}
 
 type backupReconciler struct {
 	ctx                         context.Context
@@ -473,19 +501,51 @@ func (b *backupReconciler) prepareBackupRequest(backup *velerov1api.Backup, logg
 		request.Status.ValidationErrors = append(request.Status.ValidationErrors, validatedError)
 	}
 
-	// validate the included/excluded resources
-	for _, err := range collections.ValidateIncludesExcludes(request.Spec.IncludedResources, request.Spec.ExcludedResources) {
-		request.Status.ValidationErrors = append(request.Status.ValidationErrors, fmt.Sprintf("Invalid included/excluded resource lists: %v", err))
-	}
+	if collections.UseOldResourceFilters(request.Spec) {
+		// validate the included/excluded resources
+		ieErr := collections.ValidateIncludesExcludes(request.Spec.IncludedResources, request.Spec.ExcludedResources)
+		if len(ieErr) > 0 {
+			for _, err := range ieErr {
+				request.Status.ValidationErrors = append(request.Status.ValidationErrors, fmt.Sprintf("Invalid included/excluded resource lists: %v", err))
+			}
+		} else {
+			request.Spec.IncludedResources, request.Spec.ExcludedResources =
+				modifyResourceIncludeExclude(
+					request.Spec.IncludedResources,
+					request.Spec.ExcludedResources,
+					append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
+				)
+		}
+	} else {
+		// validate the cluster-scoped included/excluded resources
+		clusterErr := collections.ValidateScopedIncludesExcludes(request.Spec.IncludedClusterScopedResources, request.Spec.ExcludedClusterScopedResources)
+		if len(clusterErr) > 0 {
+			for _, err := range clusterErr {
+				request.Status.ValidationErrors = append(request.Status.ValidationErrors, fmt.Sprintf("Invalid cluster-scoped included/excluded resource lists: %s", err))
+			}
+		} else {
+			request.Spec.IncludedClusterScopedResources, request.Spec.ExcludedClusterScopedResources =
+				modifyResourceIncludeExclude(
+					request.Spec.IncludedClusterScopedResources,
+					request.Spec.ExcludedClusterScopedResources,
+					nonBackupClusterScopedResources,
+				)
+		}
 
-	// validate the cluster-scoped included/excluded resources
-	for _, err := range collections.ValidateScopedIncludesExcludes(request.Spec.IncludedClusterScopedResources, request.Spec.ExcludedClusterScopedResources) {
-		request.Status.ValidationErrors = append(request.Status.ValidationErrors, fmt.Sprintf("Invalid cluster-scoped included/excluded resource lists: %s", err))
-	}
-
-	// validate the namespace-scoped included/excluded resources
-	for _, err := range collections.ValidateScopedIncludesExcludes(request.Spec.IncludedNamespaceScopedResources, request.Spec.ExcludedNamespaceScopedResources) {
-		request.Status.ValidationErrors = append(request.Status.ValidationErrors, fmt.Sprintf("Invalid namespace-scoped included/excluded resource lists: %s", err))
+		// validate the namespace-scoped included/excluded resources
+		namespaceErr := collections.ValidateScopedIncludesExcludes(request.Spec.IncludedNamespaceScopedResources, request.Spec.ExcludedNamespaceScopedResources)
+		if len(namespaceErr) > 0 {
+			for _, err := range namespaceErr {
+				request.Status.ValidationErrors = append(request.Status.ValidationErrors, fmt.Sprintf("Invalid namespace-scoped included/excluded resource lists: %s", err))
+			}
+		} else {
+			request.Spec.IncludedNamespaceScopedResources, request.Spec.ExcludedNamespaceScopedResources =
+				modifyResourceIncludeExclude(
+					request.Spec.IncludedNamespaceScopedResources,
+					request.Spec.ExcludedNamespaceScopedResources,
+					nonBackupNamespaceScopedResources,
+				)
+		}
 	}
 
 	// validate the included/excluded namespaces
@@ -923,4 +983,26 @@ func oldAndNewFilterParametersUsedTogether(backupSpec velerov1api.BackupSpec) bo
 		(len(backupSpec.ExcludedNamespaceScopedResources) > 0)
 
 	return haveOldResourceFilterParameters && haveNewResourceFilterParameters
+}
+
+func modifyResourceIncludeExclude(include, exclude, addedExclude []string) (modifiedInclude, modifiedExclude []string) {
+	modifiedInclude = include
+	modifiedExclude = exclude
+
+	excludeStrSet := sets.NewString(exclude...)
+	for _, ex := range addedExclude {
+		if !excludeStrSet.Has(ex) {
+			modifiedExclude = append(modifiedExclude, ex)
+		}
+	}
+
+	for _, exElem := range modifiedExclude {
+		for inIndex, inElem := range modifiedInclude {
+			if inElem == exElem {
+				modifiedInclude = slices.Delete(modifiedInclude, inIndex, inIndex+1)
+			}
+		}
+	}
+
+	return modifiedInclude, modifiedExclude
 }

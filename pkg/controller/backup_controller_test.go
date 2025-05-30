@@ -702,6 +702,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.True(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:          velerov1api.BackupPhaseFinalizing,
@@ -739,6 +740,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          "alt-loc",
 					DefaultVolumesToFsBackup: boolptr.False(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:          velerov1api.BackupPhaseFinalizing,
@@ -779,6 +781,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          "read-write",
 					DefaultVolumesToFsBackup: boolptr.True(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:          velerov1api.BackupPhaseFinalizing,
@@ -817,6 +820,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.False(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:          velerov1api.BackupPhaseFinalizing,
@@ -855,6 +859,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.True(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:          velerov1api.BackupPhaseFinalizing,
@@ -894,6 +899,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.False(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:          velerov1api.BackupPhaseFinalizing,
@@ -933,6 +939,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.True(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:          velerov1api.BackupPhaseFinalizing,
@@ -972,6 +979,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.True(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:          velerov1api.BackupPhaseFinalizing,
@@ -1011,6 +1019,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.False(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:          velerov1api.BackupPhaseFinalizing,
@@ -1051,6 +1060,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.True(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:               velerov1api.BackupPhaseFailed,
@@ -1091,6 +1101,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.True(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:               velerov1api.BackupPhaseFailed,
@@ -1131,6 +1142,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.False(),
 					SnapshotMoveData:         boolptr.True(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:                       velerov1api.BackupPhaseFinalizing,
@@ -1172,6 +1184,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.False(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:                       velerov1api.BackupPhaseFinalizing,
@@ -1213,6 +1226,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.False(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:                       velerov1api.BackupPhaseFinalizing,
@@ -1254,6 +1268,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.False(),
 					SnapshotMoveData:         boolptr.True(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:                       velerov1api.BackupPhaseFinalizing,
@@ -1296,6 +1311,7 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.False(),
 					SnapshotMoveData:         boolptr.False(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:                       velerov1api.BackupPhaseFinalizing,
@@ -1337,6 +1353,105 @@ func TestProcessBackupCompletions(t *testing.T) {
 					StorageLocation:          defaultBackupLocation.Name,
 					DefaultVolumesToFsBackup: boolptr.False(),
 					SnapshotMoveData:         boolptr.True(),
+					ExcludedResources:        append(nonBackupNamespaceScopedResources, nonBackupClusterScopedResources...),
+				},
+				Status: velerov1api.BackupStatus{
+					Phase:                       velerov1api.BackupPhaseFinalizing,
+					Version:                     1,
+					FormatVersion:               "1.1.0",
+					StartTimestamp:              &timestamp,
+					Expiration:                  &timestamp,
+					CSIVolumeSnapshotsAttempted: 0,
+					CSIVolumeSnapshotsCompleted: 0,
+				},
+			},
+			volumeSnapshot: builder.ForVolumeSnapshot("velero", "testVS").VolumeSnapshotClass("testClass").Status().BoundVolumeSnapshotContentName("testVSC").RestoreSize("10G").SourcePVC("testPVC").ObjectMeta(builder.WithLabels(velerov1api.BackupNameLabel, "backup-1")).Result(),
+		},
+		{
+			name: "backup with namespace-scoped and cluster-scoped resource filters",
+			backup: builder.ForBackup(velerov1api.DefaultNamespace, "backup-1").
+				ExcludedClusterScopedResources("clusterroles").
+				IncludedClusterScopedResources("storageclasses").
+				ExcludedNamespaceScopedResources("secrets").
+				IncludedNamespaceScopedResources("pods").Result(),
+			backupLocation:           defaultBackupLocation,
+			defaultVolumesToFsBackup: false,
+			defaultSnapshotMoveData:  true,
+			expectedResult: &velerov1api.Backup{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Backup",
+					APIVersion: "velero.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: velerov1api.DefaultNamespace,
+					Name:      "backup-1",
+					Annotations: map[string]string{
+						"velero.io/source-cluster-k8s-major-version": "1",
+						"velero.io/source-cluster-k8s-minor-version": "16",
+						"velero.io/source-cluster-k8s-gitversion":    "v1.16.4",
+						"velero.io/resource-timeout":                 "0s",
+					},
+					Labels: map[string]string{
+						"velero.io/storage-location": "loc-1",
+					},
+				},
+				Spec: velerov1api.BackupSpec{
+					StorageLocation:                  defaultBackupLocation.Name,
+					DefaultVolumesToFsBackup:         boolptr.False(),
+					SnapshotMoveData:                 boolptr.True(),
+					IncludedClusterScopedResources:   []string{"storageclasses"},
+					ExcludedClusterScopedResources:   append([]string{"clusterroles"}, nonBackupClusterScopedResources...),
+					IncludedNamespaceScopedResources: []string{"pods"},
+					ExcludedNamespaceScopedResources: append([]string{"secrets"}, nonBackupNamespaceScopedResources...),
+				},
+				Status: velerov1api.BackupStatus{
+					Phase:                       velerov1api.BackupPhaseFinalizing,
+					Version:                     1,
+					FormatVersion:               "1.1.0",
+					StartTimestamp:              &timestamp,
+					Expiration:                  &timestamp,
+					CSIVolumeSnapshotsAttempted: 0,
+					CSIVolumeSnapshotsCompleted: 0,
+				},
+			},
+			volumeSnapshot: builder.ForVolumeSnapshot("velero", "testVS").VolumeSnapshotClass("testClass").Status().BoundVolumeSnapshotContentName("testVSC").RestoreSize("10G").SourcePVC("testPVC").ObjectMeta(builder.WithLabels(velerov1api.BackupNameLabel, "backup-1")).Result(),
+		},
+		{
+			name: "backup's include filter overlap with default exclude resources",
+			backup: builder.ForBackup(velerov1api.DefaultNamespace, "backup-1").
+				ExcludedClusterScopedResources("clusterroles").
+				IncludedClusterScopedResources("storageclasses", "volumesnapshotcontents.snapshot.storage.k8s.io").
+				ExcludedNamespaceScopedResources("secrets").
+				IncludedNamespaceScopedResources("pods", "volumesnapshots.snapshot.storage.k8s.io", "backups.velero.io").Result(),
+			backupLocation:           defaultBackupLocation,
+			defaultVolumesToFsBackup: false,
+			defaultSnapshotMoveData:  true,
+			expectedResult: &velerov1api.Backup{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Backup",
+					APIVersion: "velero.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: velerov1api.DefaultNamespace,
+					Name:      "backup-1",
+					Annotations: map[string]string{
+						"velero.io/source-cluster-k8s-major-version": "1",
+						"velero.io/source-cluster-k8s-minor-version": "16",
+						"velero.io/source-cluster-k8s-gitversion":    "v1.16.4",
+						"velero.io/resource-timeout":                 "0s",
+					},
+					Labels: map[string]string{
+						"velero.io/storage-location": "loc-1",
+					},
+				},
+				Spec: velerov1api.BackupSpec{
+					StorageLocation:                  defaultBackupLocation.Name,
+					DefaultVolumesToFsBackup:         boolptr.False(),
+					SnapshotMoveData:                 boolptr.True(),
+					IncludedClusterScopedResources:   []string{"storageclasses"},
+					ExcludedClusterScopedResources:   append([]string{"clusterroles"}, nonBackupClusterScopedResources...),
+					IncludedNamespaceScopedResources: []string{"pods"},
+					ExcludedNamespaceScopedResources: append([]string{"secrets"}, nonBackupNamespaceScopedResources...),
 				},
 				Status: velerov1api.BackupStatus{
 					Phase:                       velerov1api.BackupPhaseFinalizing,
