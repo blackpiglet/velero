@@ -1526,35 +1526,34 @@ func ListVeleroPods(ctx context.Context, veleroNamespace string) ([]string, erro
 	return common.GetListByCmdPipes(ctx, cmds)
 }
 
-func GetVeleroResource(ctx context.Context, veleroNamespace, namespace, resourceName string) ([]string, error) {
-	cmds := []*common.OsCommandLine{}
-	cmd := &common.OsCommandLine{
-		Cmd:  "kubectl",
-		Args: []string{"get", resourceName, "-n", veleroNamespace},
-	}
-	cmds = append(cmds, cmd)
+func PVBNumWithPodInSpecificNS(ctx context.Context, veleroNamespace, namespace string) (int, error) {
+	cmds := make([]*common.OsCommandLine, 0)
+	cmds = common.GetResourceByJSON(cmds, veleroNamespace, "PodVolumeBackup")
 
-	cmd = &common.OsCommandLine{
-		Cmd:  "grep",
-		Args: []string{namespace},
+	jqCMD := &common.OsCommandLine{
+		Cmd:  "jq",
+		Args: []string{".items[].spec.tags.ns"},
 	}
-	cmds = append(cmds, cmd)
 
-	cmd = &common.OsCommandLine{
-		Cmd:  "awk",
-		Args: []string{"{print $1}"},
-	}
-	cmds = append(cmds, cmd)
+	cmds = append(cmds, jqCMD)
 
-	return common.GetListByCmdPipes(ctx, cmds)
+	outputList, err := common.GetListByCmdPipes(ctx, cmds)
+	return len(outputList), err
 }
 
-func GetPVB(ctx context.Context, veleroNamespace, namespace string) ([]string, error) {
-	return GetVeleroResource(ctx, veleroNamespace, namespace, "podvolumebackup")
-}
+func PVRNumWithPodInSpecificNS(ctx context.Context, veleroNamespace, namespace string) (int, error) {
+	cmds := make([]*common.OsCommandLine, 0)
+	cmds = common.GetResourceByJSON(cmds, veleroNamespace, "PodVolumeBackup")
 
-func GetPVR(ctx context.Context, veleroNamespace, namespace string) ([]string, error) {
-	return GetVeleroResource(ctx, veleroNamespace, namespace, "podvolumerestore")
+	jqCMD := &common.OsCommandLine{
+		Cmd:  "jq",
+		Args: []string{".items[].spec.tags.ns"},
+	}
+
+	cmds = append(cmds, jqCMD)
+
+	outputList, err := common.GetListByCmdPipes(ctx, cmds)
+	return len(outputList), err
 }
 
 func IsSupportUploaderType(version string) (bool, error) {

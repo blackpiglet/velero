@@ -21,12 +21,12 @@ type OsCommandLine struct {
 	Args []string
 }
 
-func GetListByCmdPipes(ctx context.Context, cmdlines []*OsCommandLine) ([]string, error) {
+func GetListByCmdPipes(ctx context.Context, cmdLines []*OsCommandLine) ([]string, error) {
 	var buf bytes.Buffer
 	var err error
 	var cmds []*exec.Cmd
 
-	for _, cmdline := range cmdlines {
+	for _, cmdline := range cmdLines {
 		cmd := exec.Command(cmdline.Cmd, cmdline.Args...)
 		cmds = append(cmds, cmd)
 	}
@@ -62,6 +62,23 @@ func GetListByCmdPipes(ctx context.Context, cmdlines []*OsCommandLine) ([]string
 		return nil, err
 	}
 	return ret, nil
+}
+
+func GetResourceByJSON(cmdLines []*OsCommandLine, veleroNamespace string, resourceName string) []*OsCommandLine {
+	kubeCMD := &OsCommandLine{
+		Cmd:  "kubectl",
+		Args: []string{"get", resourceName, "-n", veleroNamespace, "-o", "json"},
+	}
+
+	cmdLines = append(cmdLines, kubeCMD)
+
+	return cmdLines
+}
+
+func CountResourceWithFilterFunc(cmdLines []*OsCommandLine, filterFunc *OsCommandLine) []*OsCommandLine {
+	cmdLines = append(cmdLines, filterFunc)
+
+	return cmdLines
 }
 
 func CMDExecWithOutput(checkCMD *exec.Cmd) (*[]byte, error) {
