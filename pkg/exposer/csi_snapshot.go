@@ -649,7 +649,6 @@ func (e *csiSnapshotExposer) createBackupPod(
 	}
 
 	var securityCtx *corev1api.PodSecurityContext
-	nodeSelector := map[string]string{}
 	podOS := corev1api.PodOS{}
 	if nodeOS == kube.NodeOSWindows {
 		userID := "ContainerAdministrator"
@@ -745,9 +744,8 @@ func (e *csiSnapshotExposer) createBackupPod(
 					},
 				},
 			},
-			NodeSelector: nodeSelector,
-			OS:           &podOS,
-			Affinity:     podAffinity,
+			OS:       &podOS,
+			Affinity: podAffinity,
 			Containers: []corev1api.Container{
 				{
 					Name:            containerName,

@@ -36,6 +36,7 @@ const (
 	AnnStorageProvisioner     = "volume.kubernetes.io/storage-provisioner"
 	AnnBetaStorageProvisioner = "volume.beta.kubernetes.io/storage-provisioner"
 	AnnSelectedNode           = "volume.kubernetes.io/selected-node"
+	AnnVolumeHealthy          = "volumehealth.storage.kubernetes.io/health"
 )
 
 // PVCAction updates/reset PVC's node selector
@@ -101,6 +102,7 @@ func (p *PVCAction) Execute(input *velero.RestoreItemActionExecuteInput) (*veler
 			AnnStorageProvisioner,
 			AnnBetaStorageProvisioner,
 			AnnSelectedNode,
+			AnnVolumeHealthy,
 			velerov1api.VolumeSnapshotLabel,
 			velerov1api.DataUploadNameAnnotation,
 		},

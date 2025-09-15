@@ -27,6 +27,7 @@ import (
 
 	"github.com/vmware-tanzu/velero/pkg/kuberesource"
 	"github.com/vmware-tanzu/velero/pkg/plugin/velero"
+	"github.com/vmware-tanzu/velero/pkg/util"
 )
 
 type PodAction struct {
@@ -82,6 +83,14 @@ func (a *PodAction) Execute(input *velero.RestoreItemActionExecuteInput) (*veler
 		pod.Spec.InitContainers[i].VolumeMounts = preservedVolumeMounts
 	}
 
+	removePodAnnotations(pod, []string{
+		"vmware-system-vm-moid",
+		"vmware-system-vm-uuid",
+		"vmware-system-ephemeral-disk-uuid",
+		"vmware-system-image-references",
+		"vmware-system-network",
+	})
+
 	res, err := runtime.DefaultUnstructuredConverter.ToUnstructured(pod)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -93,4 +102,12 @@ func (a *PodAction) Execute(input *velero.RestoreItemActionExecuteInput) (*veler
 			{GroupResource: kuberesource.PriorityClasses, Name: pod.Spec.PriorityClassName}}
 	}
 	return restoreExecuteOutput, nil
+}
+
+func removePodAnnotations(pod *corev1api.Pod, remove []string) {
+	for k := range pod.Annotations {
+		if util.Contains(remove, k) {
+			delete(pod.Annotations, k)
+		}
+	}
 }

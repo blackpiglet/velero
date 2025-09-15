@@ -438,7 +438,6 @@ func (e *podVolumeExposer) createHostingPod(
 
 	var securityCtx *corev1api.PodSecurityContext
 	var containerSecurityCtx *corev1api.SecurityContext
-	nodeSelector := map[string]string{}
 	podOS := corev1api.PodOS{}
 	if nodeOS == kube.NodeOSWindows {
 		userID := "ContainerAdministrator"
@@ -507,9 +506,8 @@ func (e *podVolumeExposer) createHostingPod(
 			Annotations: annotation,
 		},
 		Spec: corev1api.PodSpec{
-			NodeSelector: nodeSelector,
-			OS:           &podOS,
-			Affinity:     podAffinity,
+			OS:       &podOS,
+			Affinity: podAffinity,
 			Containers: []corev1api.Container{
 				{
 					Name:            containerName,
