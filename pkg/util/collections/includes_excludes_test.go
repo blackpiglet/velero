@@ -1180,6 +1180,8 @@ func TestExpandIncludesExcludes(t *testing.T) {
 			expectedExcludes := sets.NewString(tc.expectedExcludes...)
 			assert.True(t, actualExcludes.Equal(expectedExcludes),
 				"excludes mismatch: expected %v, got %v", tc.expectedExcludes, nie.GetExcludes())
+
+			assert.Equal(t, tc.activeNamespaces, nie.GetActiveNamespaces())
 		})
 	}
 }

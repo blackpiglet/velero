@@ -80,6 +80,10 @@ func (nie *NamespaceIncludesExcludes) ActiveNamespaces(activeNamespaces []string
 	return nie
 }
 
+func (nie *NamespaceIncludesExcludes) GetActiveNamespaces() []string {
+	return nie.activeNamespaces
+}
+
 func (nie *NamespaceIncludesExcludes) IsWildcardExpanded() bool {
 	return nie.wildcardExpanded
 }
