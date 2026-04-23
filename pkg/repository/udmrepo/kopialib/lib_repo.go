@@ -25,12 +25,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/kopia/kopia/fs"
 	"github.com/kopia/kopia/repo"
 	"github.com/kopia/kopia/repo/compression"
 	"github.com/kopia/kopia/repo/content/index"
 	"github.com/kopia/kopia/repo/maintenance"
 	"github.com/kopia/kopia/repo/manifest"
 	"github.com/kopia/kopia/repo/object"
+	"github.com/kopia/kopia/snapshot"
 	"github.com/kopia/kopia/snapshot/snapshotmaintenance"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -446,19 +448,83 @@ func (kr *kopiaRepository) DeleteManifest(ctx context.Context, id udmrepo.ID) er
 	return nil
 }
 
-// TODO add implementation in following PRs
 func (kr *kopiaRepository) SaveSnapshot(ctx context.Context, snap udmrepo.Snapshot) (udmrepo.ID, error) {
-	return "", errors.New("not supported")
+	if kr.rawWriter == nil {
+		return "", errors.New("repo writer is closed or not open")
+	}
+
+	if snap.Source == "" {
+		return "", errors.New("invalid snapshot source")
+	}
+
+	rootObj, err := object.ParseID(string(snap.RootObject.ID))
+	if err != nil {
+		return "", errors.Wrapf(err, "error parsing root object ID %v", snap.RootObject.ID)
+	}
+
+	manifest := snapshot.Manifest{
+		Source: snapshot.SourceInfo{
+			UserName: udmrepo.GetRepoUser(),
+			Host:     udmrepo.GetRepoDomain(),
+			Path:     snap.Source,
+		},
+		Description: snap.Description,
+		StartTime:   fs.UTCTimestampFromTime(snap.StartTime),
+		EndTime:     fs.UTCTimestampFromTime(snap.EndTime),
+		RootEntry: &snapshot.DirEntry{
+			Type:        snapshot.EntryTypeDirectory,
+			ObjectID:    rootObj,
+			ModTime:     fs.UTCTimestampFromTime(snap.RootObject.ModTime),
+			Permissions: snapshot.Permissions(snap.RootObject.Permissions),
+			FileSize:    snap.RootObject.Size,
+			UserID:      snap.RootObject.UserID,
+			GroupID:     snap.RootObject.GroupID,
+		},
+		Tags: snap.Tags,
+	}
+
+	id, err := snapshot.SaveSnapshot(ctx, kr.rawWriter, &manifest)
+	if err != nil {
+		return "", errors.Wrap(err, "error saving snapshot")
+	}
+
+	return udmrepo.ID(id), nil
 }
 
-// TODO add implementation in following PRs
 func (kr *kopiaRepository) GetSnapshot(ctx context.Context, id udmrepo.ID) (udmrepo.Snapshot, error) {
-	return udmrepo.Snapshot{}, errors.New("not supported")
+	snap, err := snapshot.LoadSnapshot(ctx, kr.rawRepo, manifest.ID(id))
+	if err != nil {
+		return udmrepo.Snapshot{}, errors.Wrap(err, "error getting snapshot manifest")
+	}
+
+	if snap.RootEntry == nil {
+		return udmrepo.Snapshot{}, errors.Wrap(err, "invalid snapshot root entry")
+	}
+
+	return udmrepo.Snapshot{
+		Source:      snap.Source.Path,
+		Description: snap.Description,
+		StartTime:   snap.StartTime.ToTime(),
+		EndTime:     snap.EndTime.ToTime(),
+		Tags:        snap.Tags,
+		RootObject: udmrepo.ObjectMetadata{
+			ID:          udmrepo.ID(snap.RootEntry.ObjectID.String()),
+			Type:        udmrepo.ObjectDataTypeMetadata,
+			Size:        snap.RootEntry.FileSize,
+			ModTime:     snap.RootEntry.ModTime.ToTime(),
+			Permissions: int(snap.RootEntry.Permissions),
+			UserID:      snap.RootEntry.UserID,
+			GroupID:     snap.RootEntry.GroupID,
+		},
+	}, nil
 }
 
-// TODO add implementation in following PRs
 func (kr *kopiaRepository) DeleteSnapshot(ctx context.Context, id udmrepo.ID) error {
-	return errors.New("not supported")
+	if _, err := kr.GetSnapshot(ctx, id); err != nil {
+		return errors.Wrap(err, "error getting snapshot")
+	}
+
+	return kr.DeleteManifest(ctx, id)
 }
 
 func (kr *kopiaRepository) Flush(ctx context.Context) error {
