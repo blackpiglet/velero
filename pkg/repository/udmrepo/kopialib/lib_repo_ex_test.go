@@ -158,7 +158,7 @@ func TestNewObjectWriterEx(t *testing.T) {
 				ParentObject: udmrepo.ID("invalid-parent"),
 			},
 			rawWriter:   repomocks.NewMockRepositoryWriter(t),
-			expectedErr: "error to parse parent object ID from invalid-parent: malformed content ID: \"invalid-parent\": invalid content hash: encoding/hex: invalid byte: U+0069 'i'",
+			expectedErr: "error parsing parent object ID from invalid-parent: malformed content ID: \"invalid-parent\": invalid content hash: encoding/hex: invalid byte: U+0069 'i'",
 		},
 		{
 			name: "block mode with parent, valid ID but failed to load index",
