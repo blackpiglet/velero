@@ -1555,3 +1555,113 @@ func TestDeleteSnapshot(t *testing.T) {
 	}
 }
 
+func TestListSnapshot(t *testing.T) {
+	expectedTime := time.Now()
+	rawObjID, _ := object.ParseID("I123456")
+
+	mockMani := &snapshot.Manifest{
+		Source:      snapshot.SourceInfo{Path: "fake-source"},
+		Description: "fake-desc",
+		StartTime:   fs.UTCTimestampFromTime(expectedTime),
+		EndTime:     fs.UTCTimestampFromTime(expectedTime.Add(time.Minute)),
+		RootEntry: &snapshot.DirEntry{
+			ObjectID: rawObjID,
+			FileSize: 100,
+			ModTime:  fs.UTCTimestampFromTime(expectedTime),
+			Permissions: 0o644,
+			UserID:   1000,
+			GroupID:  1000,
+		},
+		Tags: map[string]string{"tag1": "val1"},
+	}
+
+	testCases := []struct {
+		name          string
+		rawRepo       *repomocks.MockRepository
+		source        string
+		findRetErr    error
+		setRepoMock   bool
+		expectedErr   string
+		expectedSnaps []udmrepo.Snapshot
+	}{
+		{
+			name:        "find manifest fail",
+			rawRepo:     repomocks.NewMockRepository(t),
+			source:      "fake-source",
+			findRetErr:  errors.New("fake-find-error"),
+			setRepoMock: true,
+			expectedErr: "error listing snapshot manifest for source fake-source: unable to find manifest entries: fake-find-error",
+		},
+		{
+			name:        "succeed",
+			rawRepo:     repomocks.NewMockRepository(t),
+			source:      "fake-source",
+			setRepoMock: true,
+			expectedSnaps: []udmrepo.Snapshot{
+				{
+					Source:      "fake-source",
+					Description: "fake-desc",
+					StartTime:   mockMani.StartTime.ToTime(),
+					EndTime:     mockMani.EndTime.ToTime(),
+					RootObject: udmrepo.ObjectMetadata{
+						ID:          udmrepo.ID("I123456"),
+						Type:        udmrepo.ObjectDataTypeMetadata,
+						Size:        mockMani.RootEntry.FileSize,
+						ModTime:     mockMani.RootEntry.ModTime.ToTime(),
+						Permissions: int(mockMani.RootEntry.Permissions),
+						UserID:      mockMani.RootEntry.UserID,
+						GroupID:     mockMani.RootEntry.GroupID,
+					},
+					Tags: map[string]string{"tag1": "val1"},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			kr := &kopiaRepository{}
+
+			if tc.rawRepo != nil {
+				if tc.setRepoMock {
+					tc.rawRepo.On("FindManifests", mock.Anything, mock.Anything).Return([]*manifest.EntryMetadata{
+						{
+							ID: "fake-id",
+							Labels: map[string]string{
+								manifest.TypeLabelKey: snapshot.ManifestType,
+								"hostname":            udmrepo.GetRepoDomain(),
+								"username":            udmrepo.GetRepoUser(),
+								"path":                tc.source,
+							},
+						},
+					}, tc.findRetErr)
+
+					tc.rawRepo.On("GetManifest", mock.Anything, mock.Anything, mock.Anything).Return(&manifest.EntryMetadata{
+						Labels: map[string]string{
+							manifest.TypeLabelKey: snapshot.ManifestType,
+						},
+					}, nil).Run(func(args mock.Arguments) {
+						payload := args.Get(2)
+						if ptr, ok := payload.(*snapshot.Manifest); ok {
+							*ptr = *mockMani
+						} else {
+							b, _ := json.Marshal(mockMani)
+							json.Unmarshal(b, payload)
+						}
+					}).Maybe()
+				}
+				kr.rawRepo = tc.rawRepo
+			}
+
+			snaps, err := kr.ListSnapshot(t.Context(), tc.source)
+
+			if tc.expectedErr == "" {
+				require.NoError(t, err)
+				assert.Equal(t, tc.expectedSnaps, snaps)
+			} else {
+				assert.EqualError(t, err, tc.expectedErr)
+			}
+		})
+	}
+}
+

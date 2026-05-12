@@ -527,6 +527,39 @@ func (kr *kopiaRepository) DeleteSnapshot(ctx context.Context, id udmrepo.ID) er
 	return kr.DeleteManifest(ctx, id)
 }
 
+func (kr *kopiaRepository) ListSnapshot(ctx context.Context, source string) ([]udmrepo.Snapshot, error) {
+	mani, err := snapshot.ListSnapshots(ctx, kr.rawRepo, snapshot.SourceInfo{
+		Host:     udmrepo.GetRepoDomain(),
+		UserName: udmrepo.GetRepoUser(),
+		Path:     source,
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "error listing snapshot manifest for source %s", source)
+	}
+
+	snapshots := []udmrepo.Snapshot{}
+	for _, snap := range mani {
+		snapshots = append(snapshots, udmrepo.Snapshot{
+			Source:      snap.Source.Path,
+			Description: snap.Description,
+			StartTime:   snap.StartTime.ToTime(),
+			EndTime:     snap.EndTime.ToTime(),
+			Tags:        snap.Tags,
+			RootObject: udmrepo.ObjectMetadata{
+				ID:          udmrepo.ID(snap.RootEntry.ObjectID.String()),
+				Type:        udmrepo.ObjectDataTypeMetadata,
+				Size:        snap.RootEntry.FileSize,
+				ModTime:     snap.RootEntry.ModTime.ToTime(),
+				Permissions: int(snap.RootEntry.Permissions),
+				UserID:      snap.RootEntry.UserID,
+				GroupID:     snap.RootEntry.GroupID,
+			},
+		})
+	}
+
+	return snapshots, nil
+}
+
 func (kr *kopiaRepository) Flush(ctx context.Context) error {
 	if kr.rawWriter == nil {
 		return errors.New("repo writer is closed or not open")

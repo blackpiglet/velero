@@ -180,6 +180,9 @@ type BackupRepo interface {
 	// DeleteSnapshot deletes a repo snapshot
 	DeleteSnapshot(ctx context.Context, id ID) error
 
+	// ListSnapshot lists all snapshots in repo for the given source
+	ListSnapshot(ctx context.Context, source string) ([]Snapshot, error)
+
 	// Close closes the backup repository
 	Close(ctx context.Context) error
 }
