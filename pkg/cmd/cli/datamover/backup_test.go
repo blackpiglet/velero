@@ -25,6 +25,7 @@ import (
 	ctlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/vmware-tanzu/velero/internal/credentials"
+	"github.com/vmware-tanzu/velero/pkg/cbtservice"
 	cacheMock "github.com/vmware-tanzu/velero/pkg/cmd/cli/datamover/mocks"
 	velerotest "github.com/vmware-tanzu/velero/pkg/test"
 	"github.com/vmware-tanzu/velero/pkg/util/filesystem"
@@ -129,6 +130,7 @@ func TestRunDataPath(t *testing.T) {
 				config: dataMoverBackupConfig{
 					duName: test.duName,
 				},
+				cbtService: cbtservice.Service(nil),
 			}
 
 			s.runDataPath()
