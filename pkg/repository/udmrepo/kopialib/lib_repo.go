@@ -498,7 +498,7 @@ func (kr *kopiaRepository) GetSnapshot(ctx context.Context, id udmrepo.ID) (udmr
 	}
 
 	if snap.RootEntry == nil {
-		return udmrepo.Snapshot{}, errors.Wrap(err, "invalid snapshot root entry")
+		return udmrepo.Snapshot{}, errors.New("invalid snapshot root entry")
 	}
 
 	return udmrepo.Snapshot{

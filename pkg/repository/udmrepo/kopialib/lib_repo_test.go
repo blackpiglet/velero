@@ -1565,12 +1565,12 @@ func TestListSnapshot(t *testing.T) {
 		StartTime:   fs.UTCTimestampFromTime(expectedTime),
 		EndTime:     fs.UTCTimestampFromTime(expectedTime.Add(time.Minute)),
 		RootEntry: &snapshot.DirEntry{
-			ObjectID: rawObjID,
-			FileSize: 100,
-			ModTime:  fs.UTCTimestampFromTime(expectedTime),
+			ObjectID:    rawObjID,
+			FileSize:    100,
+			ModTime:     fs.UTCTimestampFromTime(expectedTime),
 			Permissions: 0o644,
-			UserID:   1000,
-			GroupID:  1000,
+			UserID:      1000,
+			GroupID:     1000,
 		},
 		Tags: map[string]string{"tag1": "val1"},
 	}
@@ -1664,4 +1664,3 @@ func TestListSnapshot(t *testing.T) {
 		})
 	}
 }
-
