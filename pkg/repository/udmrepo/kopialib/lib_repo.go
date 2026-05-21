@@ -741,23 +741,23 @@ func openKopiaRepo(ctx context.Context, configFile string, password string, opti
 }
 
 func getKopiaObjectType(tp int) snapshot.EntryType {
-	objType := snapshot.EntryTypeUnknown
-	if tp == udmrepo.ObjectDataTypeMetadata {
-		objType = snapshot.EntryTypeDirectory
-	} else {
-		objType = snapshot.EntryTypeFile
+	switch tp {
+	case udmrepo.ObjectDataTypeMetadata:
+		return snapshot.EntryTypeDirectory
+	case udmrepo.ObjectDataTypeData:
+		return snapshot.EntryTypeFile
+	default:
+		return snapshot.EntryTypeUnknown
 	}
-
-	return objType
 }
 
 func getObjectDataType(tp snapshot.EntryType) int {
-	dataType := udmrepo.ObjectDataTypeUnknown
-	if tp == snapshot.EntryTypeDirectory {
-		dataType = udmrepo.ObjectDataTypeMetadata
-	} else {
-		dataType = udmrepo.ObjectDataTypeData
+	switch tp {
+	case snapshot.EntryTypeDirectory:
+		return udmrepo.ObjectDataTypeMetadata
+	case snapshot.EntryTypeFile:
+		return udmrepo.ObjectDataTypeData
+	default:
+		return udmrepo.ObjectDataTypeUnknown
 	}
-
-	return dataType
 }
