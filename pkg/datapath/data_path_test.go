@@ -94,7 +94,7 @@ func TestAsyncBackup(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			dp := newGeneralDataPath("job-1", "test", nil, "velero", Callbacks{}, velerotest.NewLogger()).(*genearalDataPath)
+			dp := newGeneralDataPath("job-1", "test", nil, "velero", Callbacks{}, velerotest.NewLogger()).(*generalDataPath)
 			mockProvider := providerMock.NewProvider(t)
 			mockProvider.On("RunBackup", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(test.result.Backup.SnapshotID, test.result.Backup.EmptySnapshot, test.result.Backup.TotalBytes, test.result.Backup.IncrementalBytes, test.err)
 			mockProvider.On("Close", mock.Anything).Return(nil)
@@ -182,7 +182,7 @@ func TestAsyncRestore(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			dp := newGeneralDataPath("job-1", "test", nil, "velero", Callbacks{}, velerotest.NewLogger()).(*genearalDataPath)
+			dp := newGeneralDataPath("job-1", "test", nil, "velero", Callbacks{}, velerotest.NewLogger()).(*generalDataPath)
 			mockProvider := providerMock.NewProvider(t)
 			mockProvider.On("RunRestore", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(test.result.Restore.TotalBytes, test.err)
 			mockProvider.On("Close", mock.Anything).Return(nil)

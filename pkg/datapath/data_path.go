@@ -55,7 +55,7 @@ type BackupStartParam struct {
 	Tags           map[string]string
 }
 
-type genearalDataPath struct {
+type generalDataPath struct {
 	ctx            context.Context
 	cancel         context.CancelFunc
 	backupRepo     *velerov1api.BackupRepository
@@ -73,7 +73,7 @@ type genearalDataPath struct {
 }
 
 func newGeneralDataPath(jobName string, requestorType string, client client.Client, namespace string, callbacks Callbacks, log logrus.FieldLogger) AsyncBR {
-	dp := &genearalDataPath{
+	dp := &generalDataPath{
 		jobName:       jobName,
 		requestorType: requestorType,
 		client:        client,
@@ -86,7 +86,7 @@ func newGeneralDataPath(jobName string, requestorType string, client client.Clie
 	return dp
 }
 
-func (dp *genearalDataPath) Init(ctx context.Context, param any) error {
+func (dp *generalDataPath) Init(ctx context.Context, param any) error {
 	initParam := param.(*InitParam)
 
 	var err error
@@ -138,7 +138,7 @@ func (dp *genearalDataPath) Init(ctx context.Context, param any) error {
 	return nil
 }
 
-func (dp *genearalDataPath) Close(ctx context.Context) {
+func (dp *generalDataPath) Close(ctx context.Context) {
 	if dp.cancel != nil {
 		dp.cancel()
 	}
@@ -152,7 +152,7 @@ func (dp *genearalDataPath) Close(ctx context.Context) {
 	dp.log.WithField("user", dp.jobName).Info("Data path is closed")
 }
 
-func (dp *genearalDataPath) close(ctx context.Context) {
+func (dp *generalDataPath) close(ctx context.Context) {
 	dp.dataPathLock.Lock()
 	defer dp.dataPathLock.Unlock()
 
@@ -165,7 +165,7 @@ func (dp *genearalDataPath) close(ctx context.Context) {
 	}
 }
 
-func (dp *genearalDataPath) StartBackup(source AccessPoint, uploaderConfig map[string]string, param any) error {
+func (dp *generalDataPath) StartBackup(source AccessPoint, uploaderConfig map[string]string, param any) error {
 	if !dp.initialized {
 		return errors.New("file system data path is not initialized")
 	}
@@ -201,7 +201,7 @@ func (dp *genearalDataPath) StartBackup(source AccessPoint, uploaderConfig map[s
 	return nil
 }
 
-func (dp *genearalDataPath) StartRestore(snapshotID string, target AccessPoint, uploaderConfigs map[string]string) error {
+func (dp *generalDataPath) StartRestore(snapshotID string, target AccessPoint, uploaderConfigs map[string]string) error {
 	if !dp.initialized {
 		return errors.New("data path is not initialized")
 	}
@@ -235,18 +235,18 @@ func (dp *genearalDataPath) StartRestore(snapshotID string, target AccessPoint, 
 }
 
 // UpdateProgress which implement ProgressUpdater interface to update progress status
-func (dp *genearalDataPath) UpdateProgress(p *uploader.Progress) {
+func (dp *generalDataPath) UpdateProgress(p *uploader.Progress) {
 	if dp.callbacks.OnProgress != nil {
 		dp.callbacks.OnProgress(context.Background(), dp.namespace, dp.jobName, &uploader.Progress{TotalBytes: p.TotalBytes, BytesDone: p.BytesDone})
 	}
 }
 
-func (dp *genearalDataPath) Cancel() {
+func (dp *generalDataPath) Cancel() {
 	dp.cancel()
 	dp.log.WithField("user", dp.jobName).Info("FileSystemBR is canceled")
 }
 
-func (dp *genearalDataPath) boostRepoConnect(ctx context.Context, repositoryType string, credentialGetter *credentials.CredentialGetter, cacheDir string) error {
+func (dp *generalDataPath) boostRepoConnect(ctx context.Context, repositoryType string, credentialGetter *credentials.CredentialGetter, cacheDir string) error {
 	if repositoryType == velerov1api.BackupRepositoryTypeKopia {
 		if err := repoProvider.NewUnifiedRepoProvider(*credentialGetter, repositoryType, dp.log).BoostRepoConnect(ctx, repoProvider.RepoParam{BackupLocation: dp.backupLocation, BackupRepo: dp.backupRepo, CacheDir: cacheDir}); err != nil {
 			return err
