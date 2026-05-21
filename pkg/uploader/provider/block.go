@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
 	"github.com/vmware-tanzu/velero/internal/credentials"
 	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	repokeys "github.com/vmware-tanzu/velero/pkg/repository/keys"
@@ -34,7 +35,6 @@ type blockProvider struct {
 	bkRepo        udmrepo.BackupRepo
 	credGetter    *credentials.CredentialGetter
 	log           logrus.FieldLogger
-	canceling     int32
 }
 
 // NewBlockUploaderProvider initialized with open or create a repository
@@ -100,8 +100,7 @@ func (bp *blockProvider) RunBackup(
 	volMode uploader.PersistentVolumeMode,
 	uploaderCfg map[string]string,
 	updater uploader.ProgressUpdater) (string, bool, int64, int64, error) {
-
-	return "", false, 0, 0, nil
+	return "", false, 0, 0, errors.New("block backup not implemented")
 }
 
 // TODO: implement in the following PRs
@@ -112,5 +111,5 @@ func (bp *blockProvider) RunRestore(
 	volMode uploader.PersistentVolumeMode,
 	uploaderCfg map[string]string,
 	updater uploader.ProgressUpdater) (int64, error) {
-	return 0, nil
+	return 0, errors.New("block restore not implemented")
 }

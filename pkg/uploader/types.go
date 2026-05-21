@@ -42,7 +42,7 @@ const (
 func ValidateUploaderType(t string) (string, error) {
 	t = strings.TrimSpace(t)
 	if t != KopiaType && t != BlockType {
-		return "", fmt.Errorf("invalid uploader type '%s', valid type: '%s'", t, KopiaType)
+		return "", fmt.Errorf("invalid uploader type '%s', valid types: '%s', '%s'", t, KopiaType, BlockType)
 	}
 
 	return "", nil

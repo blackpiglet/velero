@@ -121,7 +121,7 @@ func TestBlockProviderClose(t *testing.T) {
 	}
 
 	err := bp.Close(t.Context())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	mockBRepo.AssertExpectations(t)
 }
 
