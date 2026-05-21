@@ -83,36 +83,36 @@ func TestDataUploadDeleteActionAppliesTo(t *testing.T) {
 
 func TestDataUploadDeleteActionExecute(t *testing.T) {
 	tests := []struct {
-		name            string
-		duName          string
-		duOwnerBackup   string // value placed in velero.io/backup-name label on the DataUpload
-		executingBackup string // name of the Backup being deleted (input.Backup.Name)
-		wantConfigMap   bool
-		wantWarn        bool // whether a warn-level log about a foreign DataUpload is expected
+		name             string
+		duName           string
+		duOwnerBackup    string // value placed in velero.io/backup-name label on the DataUpload
+		executingBackup  string // name of the Backup being deleted (input.Backup.Name)
+		wantConfigMap    bool
+		wantWarnContains string // substring expected in a warn-level log entry; empty means no warn expected
 	}{
 		{
-			name:            "DataUpload owned by the executing backup creates a snapshot-info ConfigMap",
-			duName:          "daily-backup-abcde",
-			duOwnerBackup:   "daily-backup",
-			executingBackup: "daily-backup",
-			wantConfigMap:   true,
-			wantWarn:        false,
+			name:             "DataUpload owned by the executing backup creates a snapshot-info ConfigMap",
+			duName:           "daily-backup-abcde",
+			duOwnerBackup:    "daily-backup",
+			executingBackup:  "daily-backup",
+			wantConfigMap:    true,
+			wantWarnContains: "",
 		},
 		{
-			name:            "DataUpload owned by a different backup is skipped and a warning is logged",
-			duName:          "daily-backup-abcde",
-			duOwnerBackup:   "daily-backup",
-			executingBackup: "hourly-backup",
-			wantConfigMap:   false,
-			wantWarn:        true,
+			name:             "DataUpload owned by a different backup is skipped and a warning is logged",
+			duName:           "daily-backup-abcde",
+			duOwnerBackup:    "daily-backup",
+			executingBackup:  "hourly-backup",
+			wantConfigMap:    false,
+			wantWarnContains: "velero namespace",
 		},
 		{
-			name:            "DataUpload with no backup-name label falls through (legacy behavior preserved)",
-			duName:          "legacy-du",
-			duOwnerBackup:   "",
-			executingBackup: "some-backup",
-			wantConfigMap:   true,
-			wantWarn:        false,
+			name:             "DataUpload with no backup-name label is skipped and a warning is logged",
+			duName:           "unlabeled-du",
+			duOwnerBackup:    "",
+			executingBackup:  "some-backup",
+			wantConfigMap:    false,
+			wantWarnContains: "cannot be verified",
 		},
 	}
 
@@ -148,22 +148,24 @@ func TestDataUploadDeleteActionExecute(t *testing.T) {
 					"expected no ConfigMap to be created for foreign DataUpload, but got: %v", getErr)
 			}
 
-			// The action must surface foreign-backup DataUploads as warnings so
-			// operators who accidentally included the velero namespace in a
-			// backup can detect the misconfiguration from logs, instead of
-			// having the case silently swallowed.
-			var sawForeignWarn bool
+			// The action must surface DataUploads it cannot generate a useful
+			// snapshot-info ConfigMap for as warnings, so operators who
+			// accidentally included the velero namespace in a backup (or
+			// otherwise produced DataUploads without a verifiable owner) can
+			// detect the misconfiguration from logs instead of having the
+			// case silently swallowed.
+			var sawWarn bool
 			for _, entry := range hook.AllEntries() {
 				if entry.Level == logrus.WarnLevel &&
-					strings.Contains(entry.Message, "velero namespace") &&
-					strings.Contains(entry.Message, tc.duName) {
-					sawForeignWarn = true
+					strings.Contains(entry.Message, tc.duName) &&
+					(tc.wantWarnContains == "" || strings.Contains(entry.Message, tc.wantWarnContains)) {
+					sawWarn = true
 					break
 				}
 			}
-			assert.Equal(t, tc.wantWarn, sawForeignWarn,
-				"unexpected foreign-backup warn log presence (want=%v, got=%v); entries=%v",
-				tc.wantWarn, sawForeignWarn, hook.AllEntries())
+			assert.Equal(t, tc.wantWarnContains != "", sawWarn,
+				"unexpected warn log presence (wantContains=%q, got=%v); entries=%v",
+				tc.wantWarnContains, sawWarn, hook.AllEntries())
 		})
 	}
 }

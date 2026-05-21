@@ -36,17 +36,35 @@ func (d *DataUploadDeleteAction) Execute(input *velero.DeleteItemActionExecuteIn
 	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(input.Item.UnstructuredContent(), &du); err != nil {
 		return errors.WithStack(errors.Wrapf(err, "failed to convert input.Item from unstructured"))
 	}
-	// Detect DataUploads that do not belong to the backup being deleted.
-	// Velero does not support self-protection: the velero namespace should
-	// never be captured in a backup tarball. When it is (e.g. an operator
-	// schedule covers the velero namespace), the tarball can contain
-	// DataUpload CRs belonging to *other* backups. Creating a snapshot-info
-	// ConfigMap labeled with the executing backup's name in that case
-	// mislabels the snapshot and causes the real owning backup's
-	// deleteMovedSnapshots query to miss it, leaking the Kopia snapshot in
-	// the object store. Log a warning so misconfigured installs are visible,
-	// and skip the snapshot-info ConfigMap creation to avoid mislabeling.
-	if owner := du.Labels[velerov1.BackupNameLabel]; owner != "" && owner != label.GetValidName(input.Backup.Name) {
+	// Only create a snapshot-info ConfigMap when the DataUpload's owning
+	// backup (its velero.io/backup-name label) matches the backup currently
+	// being deleted. Two other cases reach this code path and must be
+	// skipped, because the resulting CM would be unmatchable and only adds
+	// etcd churn:
+	//
+	//  1. The label is missing. We have no verifiable owner, so a CM created
+	//     with the executing backup's label is a guess that deleteMovedSnapshots
+	//     cannot rely on.
+	//  2. The label names a different backup. Velero does not support
+	//     self-protection, so this almost always means the velero namespace
+	//     was captured in a backup tarball and the DataUpload CR belongs to
+	//     an unrelated backup. Creating a CM labeled with the executing
+	//     backup mislabels the snapshot and causes the real owning backup's
+	//     deleteMovedSnapshots query to miss it, leaking the Kopia snapshot
+	//     in the object store.
+	//
+	// Both cases warn so misconfigured installs surface in logs.
+	owner := du.Labels[velerov1.BackupNameLabel]
+	switch {
+	case owner == "":
+		d.logger.Warnf(
+			"DataUpload %q has no %q label, so its owning backup cannot be verified; "+
+				"skipping snapshot-info ConfigMap creation because a CM without a verifiable owner "+
+				"cannot be matched back to its snapshot at backup deletion time.",
+			du.Name, velerov1.BackupNameLabel,
+		)
+		return nil
+	case owner != label.GetValidName(input.Backup.Name):
 		d.logger.Warnf(
 			"DataUpload %q belongs to backup %q but is being deleted under backup %q; "+
 				"this almost always means the velero namespace was included in a backup tarball. "+
