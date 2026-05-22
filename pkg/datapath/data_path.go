@@ -167,7 +167,7 @@ func (dp *generalDataPath) close(ctx context.Context) {
 
 func (dp *generalDataPath) StartBackup(source AccessPoint, uploaderConfig map[string]string, param any) error {
 	if !dp.initialized {
-		return errors.New("file system data path is not initialized")
+		return errors.New("data path is not initialized")
 	}
 
 	dp.wgDataPath.Add(1)
@@ -243,7 +243,7 @@ func (dp *generalDataPath) UpdateProgress(p *uploader.Progress) {
 
 func (dp *generalDataPath) Cancel() {
 	dp.cancel()
-	dp.log.WithField("user", dp.jobName).Info("FileSystemBR is canceled")
+	dp.log.WithField("user", dp.jobName).Info("Data path is canceled")
 }
 
 func (dp *generalDataPath) boostRepoConnect(ctx context.Context, repositoryType string, credentialGetter *credentials.CredentialGetter, cacheDir string) error {
