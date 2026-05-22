@@ -105,7 +105,7 @@ func TestRunBackup(t *testing.T) {
 			if tc.volMode == "" {
 				tc.volMode = uploader.PersistentVolumeFilesystem
 			}
-			BackupFunc = tc.hookBackupFunc
+			kopiaBackupFunc = tc.hookBackupFunc
 			_, _, _, _, err := kp.RunBackup(t.Context(), "var", "", nil, false, "", CBTParam{}, tc.volMode, map[string]string{}, &updater)
 			if tc.notError {
 				assert.NoError(t, err)
@@ -156,7 +156,7 @@ func TestRunRestore(t *testing.T) {
 			if tc.volMode == "" {
 				tc.volMode = uploader.PersistentVolumeFilesystem
 			}
-			RestoreFunc = tc.hookRestoreFunc
+			kopiaRestoreFunc = tc.hookRestoreFunc
 			_, err := kp.RunRestore(t.Context(), "", "/var", tc.volMode, map[string]string{}, &updater)
 			if tc.notError {
 				assert.NoError(t, err)
