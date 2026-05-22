@@ -54,7 +54,7 @@ type Action struct {
 	Parameters map[string]any `yaml:"parameters,omitempty"`
 }
 
-// ResourceFilter defines a filter for specific resource kinds within a namespace.
+// ResourceFilter defines a filter for specific resource kinds.
 type ResourceFilter struct {
 	Kinds            []string            `yaml:"kinds"`
 	LabelSelector    map[string]string   `yaml:"labelSelector,omitempty"`
