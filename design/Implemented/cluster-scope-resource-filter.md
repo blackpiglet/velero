@@ -382,7 +382,7 @@ type BackupSpec struct {
 ```
 
 ## Alternatives Considered
-Proposal from Jibu Data [Issue 5120](https://github.com/vmware-tanzu/velero/issues/5120#issue-1304534563)
+Proposal from Jibu Data [Issue 5120](https://github.com/velero-io/velero/issues/5120#issue-1304534563)
 
 ## Security Considerations
 No security impact.
@@ -399,4 +399,4 @@ Plan to deprecate `IncludedResources`, `ExcludedResources` and `IncludeClusterRe
 ## Open Issues
 `LabelSelector/OrLabelSelectors` apply to namespace-scoped resources.
 It may be reasonable to make them also working on cluster-scoped resources.
-An issue is created to trace this topic [resource label selector not work for cluster-scoped resources](https://github.com/vmware-tanzu/velero/issues/5787)
+An issue is created to trace this topic [resource label selector not work for cluster-scoped resources](https://github.com/velero-io/velero/issues/5787)

@@ -30,9 +30,9 @@ import (
 
 	//"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
-	"github.com/vmware-tanzu/velero/pkg/builder"
-	velerotest "github.com/vmware-tanzu/velero/pkg/test"
+	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
+	"github.com/velero-io/velero/pkg/builder"
+	velerotest "github.com/velero-io/velero/pkg/test"
 )
 
 func TestBackupQueueReconciler(t *testing.T) {

@@ -8,7 +8,7 @@ This document proposes a solution to select an API group version to restore from
 
 ## Background
 
-It is possible that between the time a backup has been made and a restore occurs that the target Kubernetes version has incremented more than one version. In such a case where at least a versions of Kubernetes was skipped, the preferred source cluster's API group versions for resources may no longer be supported by the target cluster. With [PR#2373](https://github.com/vmware-tanzu/velero/pull/2373), all supported API group versions were backed up if the EnableAPIGroupVersions feature flag was set for Velero. The next step (outlined by this design proposal) will be to see if any of the backed up versions are supported in the target cluster and if so, choose one to restore for each backed up resource.
+It is possible that between the time a backup has been made and a restore occurs that the target Kubernetes version has incremented more than one version. In such a case where at least a versions of Kubernetes was skipped, the preferred source cluster's API group versions for resources may no longer be supported by the target cluster. With [PR#2373](https://github.com/velero-io/velero/pull/2373), all supported API group versions were backed up if the EnableAPIGroupVersions feature flag was set for Velero. The next step (outlined by this design proposal) will be to see if any of the backed up versions are supported in the target cluster and if so, choose one to restore for each backed up resource.
 
 ## Goals
 
@@ -50,19 +50,19 @@ There are six objectives to achieve the above stated goals:
 
 ### Objective 1: Determine if the APIGroupVersionsFeatureFlag is enabled and Backup Objects use Status.FormatVersion 1.1.0
 
-For restore to be able to choose from multiple supported backed up versions, the feature flag must have been enabled during the restore processes. Backup objects must also have [Status.FormatVersion == "1.1.0"](https://github.com/vmware-tanzu/velero/blob/a1e182e723a8c5f6d4175d8db2361233a94d2502/pkg/backup/backup.go#L58).
+For restore to be able to choose from multiple supported backed up versions, the feature flag must have been enabled during the restore processes. Backup objects must also have [Status.FormatVersion == "1.1.0"](https://github.com/velero-io/velero/blob/a1e182e723a8c5f6d4175d8db2361233a94d2502/pkg/backup/backup.go#L58).
 
 The reason for checking for the feature flag during restore is to ensure the user would like to restore a version that might not be the source cluster preferred version. This check is done via `features.IsEnabled(velerov1api.APIGroupVersionsFeatureFlag)`.
 
 The reason for checking `Status.FormatVersion` is to ensure the changes made by this proposed design is backward compatible. Only with Velero version 1.4 and forward was Format Version 1.1.0 used to structure the backup directories. Format Version 1.1.0 is required for the restore process proposed in this design doc to work. Before v1.4, the backed up files were in a directory structure that will not be recognized by the proposed code changes. In this case, restore should not attempt to restore from multiple versions as they will not exist.
 
-The [`Status.FormatVersion`](https://github.com/vmware-tanzu/velero/blob/6808acd92e30848056a21faf373af03ddb8a3b71/pkg/apis/velero/v1/backup.go#L235) is stored in a `restoreContext` struct field called [`backup`](https://github.com/vmware-tanzu/velero/blob/6808acd92e30848056a21faf373af03ddb8a3b71/pkg/restore/restore.go#L229). The full chain is `ctx.backup.Status.FormatVersion`.  
+The [`Status.FormatVersion`](https://github.com/velero-io/velero/blob/6808acd92e30848056a21faf373af03ddb8a3b71/pkg/apis/velero/v1/backup.go#L235) is stored in a `restoreContext` struct field called [`backup`](https://github.com/velero-io/velero/blob/6808acd92e30848056a21faf373af03ddb8a3b71/pkg/restore/restore.go#L229). The full chain is `ctx.backup.Status.FormatVersion`.  
 
 The above two checks can be done inside a new method on the `*restoreContext` object with the method signature `meetsAPIGVRestoreReqs() bool`. This method can remain in the `restore` package, but for organizational purposes, it can be moved to a file called `prioritize_group_version.go`.
 
 ### Objective 2: List the backed up API group versions
 
-Currently, in `pkg/restore/restore.go`, in the `execute(...)` method, around [line 363](https://github.com/vmware-tanzu/velero/blob/7a103b9eda878769018386ecae78da4e4f8dde83/pkg/restore/restore.go#L363), the resources and their backed up items are saved in a map called `backupResources`.
+Currently, in `pkg/restore/restore.go`, in the `execute(...)` method, around [line 363](https://github.com/velero-io/velero/blob/7a103b9eda878769018386ecae78da4e4f8dde83/pkg/restore/restore.go#L363), the resources and their backed up items are saved in a map called `backupResources`.
 
 At this point, the feature flag and format versions can be checked (described in Objective #1). If the requirements are met, the `backedupResources` map can be sent to a method (to be created) with the signature `ctx.chooseAPIVersionsToRestore(backupResources)`. The `ctx` object has the type `*restore.Context`.
 
@@ -158,7 +158,7 @@ To see example cases with version priorities, see a blog post written by Rafael 
 
 ### Objective 6: Modify the paths to the backup files in the tarball
 
-The method doing the bulk of the restoration work is `ctx.restoreResource(...)`. Inside this method, around [line 714](https://github.com/vmware-tanzu/velero/blob/7a103b9eda878769018386ecae78da4e4f8dde83/pkg/restore/restore.go#L714) in `pkg/restore/restore.go`, the path to backup json file for the item being restored is set.
+The method doing the bulk of the restoration work is `ctx.restoreResource(...)`. Inside this method, around [line 714](https://github.com/velero-io/velero/blob/7a103b9eda878769018386ecae78da4e4f8dde83/pkg/restore/restore.go#L714) in `pkg/restore/restore.go`, the path to backup json file for the item being restored is set.
 
 After the groupResource is instantiated at pkg/restore/restore.go:733, and before the `for` loop that ranges through the `items`, the `ctx.chosenGRVsToRestore` map can be checked. If the groupResource exists in the map, the path saved to `resource` variable can be updated.
 

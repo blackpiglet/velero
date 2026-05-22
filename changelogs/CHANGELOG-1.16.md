@@ -1,7 +1,7 @@
 ## v1.16
 
 ### Download
-https://github.com/vmware-tanzu/velero/releases/tag/v1.16.0
+https://github.com/velero-io/velero/releases/tag/v1.16.0
 
 ### Container Image
 `velero/velero:v1.16.0`
@@ -15,28 +15,28 @@ https://velero.io/docs/v1.16/upgrade-to-1.16/
 ### Highlights
 #### Windows cluster support
 In v1.16, Velero supports to run in Windows clusters and backup/restore Windows workloads, either stateful or stateless:
- * Hybrid build and all-in-one image: the build process is enhanced to build an all-in-one image for hybrid CPU architecture and hybrid platform. For more information, check the design https://github.com/vmware-tanzu/velero/blob/main/design/multiple-arch-build-with-windows.md
+ * Hybrid build and all-in-one image: the build process is enhanced to build an all-in-one image for hybrid CPU architecture and hybrid platform. For more information, check the design https://github.com/velero-io/velero/blob/main/design/multiple-arch-build-with-windows.md
  * Deployment in Windows clusters: Velero node-agent, data mover pods and maintenance jobs now support to run in both linux and Windows nodes
  * Data mover backup/restore Windows workloads: Velero built-in data mover supports Windows workloads throughout its full cycle, i.e., discovery, backup, restore, pre/post hook, etc. It automatically identifies Windows workloads and schedules data mover pods to the right group of nodes
 
-Check the epic issue https://github.com/vmware-tanzu/velero/issues/8289 for more information.  
+Check the epic issue https://github.com/velero-io/velero/issues/8289 for more information.  
 
 #### Parallel Item Block backup
 v1.16 now supports to back up item blocks in parallel. Specifically, during backup, correlated resources are grouped in item blocks and Velero backup engine creates a thread pool to back up the item blocks in parallel. This significantly improves the backup throughput, especially when there are large scale of resources.  
 Pre/post hooks also belongs to item blocks, so will also run in parallel along with the item blocks.  
 Users are allowed to configure the parallelism through the `--item-block-worker-count` Velero server parameter. If not configured, the default parallelism is 1.  
 
-For more information, check issue https://github.com/vmware-tanzu/velero/issues/8334.  
+For more information, check issue https://github.com/velero-io/velero/issues/8334.  
 
 #### Data mover restore enhancement in scalability
-In previous releases, for each volume of WaitForFirstConsumer mode, data mover restore is only allowed to happen in the node that the volume is attached. This severely degrades the parallelism and the balance of node resource(CPU, memory, network bandwidth) consumption for data mover restore (https://github.com/vmware-tanzu/velero/issues/8044).  
+In previous releases, for each volume of WaitForFirstConsumer mode, data mover restore is only allowed to happen in the node that the volume is attached. This severely degrades the parallelism and the balance of node resource(CPU, memory, network bandwidth) consumption for data mover restore (https://github.com/velero-io/velero/issues/8044).  
 
-In v1.16, users are allowed to configure data mover restores running and spreading evenly across all nodes in the cluster. The configuration is done through a new flag `ignoreDelayBinding` in node-agent configuration (https://github.com/vmware-tanzu/velero/issues/8242).  
+In v1.16, users are allowed to configure data mover restores running and spreading evenly across all nodes in the cluster. The configuration is done through a new flag `ignoreDelayBinding` in node-agent configuration (https://github.com/velero-io/velero/issues/8242).  
 
 #### Data mover enhancements in observability 
 In 1.16, some observability enhancements are added:
- * Output various statuses of intermediate objects for failures of data mover backup/restore (https://github.com/vmware-tanzu/velero/issues/8267)
- * Output the errors when Velero fails to delete intermediate objects during clean up (https://github.com/vmware-tanzu/velero/issues/8125)
+ * Output various statuses of intermediate objects for failures of data mover backup/restore (https://github.com/velero-io/velero/issues/8267)
+ * Output the errors when Velero fails to delete intermediate objects during clean up (https://github.com/velero-io/velero/issues/8125)
 
 The outputs are in the same node-agent log and enabled automatically.  
 
@@ -45,24 +45,24 @@ In previous releases, a unnecessary VolumeSnapshotContent object is retained for
 
 In 1.16, the retained VolumeSnapshotContent is removed from the backup, so no unnecessary CSI objects are synced or restored.  
 
-For more information, check issue https://github.com/vmware-tanzu/velero/issues/8725.  
+For more information, check issue https://github.com/velero-io/velero/issues/8725.  
 
 #### Backup Repository Maintenance enhancement in resiliency and observability
 In v1.16, some enhancements of backup repository maintenance are added to improve the observability and resiliency:
- * A new backup repository maintenance history section, called `RecentMaintenance`, is added to the BackupRepository CR. Specifically, for each BackupRepository, including start/completion time, completion status and error message. (https://github.com/vmware-tanzu/velero/issues/7810)
- * Running maintenance jobs are now recaptured after Velero server restarts. (https://github.com/vmware-tanzu/velero/issues/7753)
- * The maintenance job will not be launched for readOnly BackupStorageLocation. (https://github.com/vmware-tanzu/velero/issues/8238)
- * The backup repository will not try to initialize a new repository for readOnly BackupStorageLocation. (https://github.com/vmware-tanzu/velero/issues/8091)
- * Users now are allowed to configure the intervals of an effective maintenance in the way of `normalGC`, `fastGC` and `eagerGC`, through the `fullMaintenanceInterval` parameter in backupRepository configuration. (https://github.com/vmware-tanzu/velero/issues/8364)
+ * A new backup repository maintenance history section, called `RecentMaintenance`, is added to the BackupRepository CR. Specifically, for each BackupRepository, including start/completion time, completion status and error message. (https://github.com/velero-io/velero/issues/7810)
+ * Running maintenance jobs are now recaptured after Velero server restarts. (https://github.com/velero-io/velero/issues/7753)
+ * The maintenance job will not be launched for readOnly BackupStorageLocation. (https://github.com/velero-io/velero/issues/8238)
+ * The backup repository will not try to initialize a new repository for readOnly BackupStorageLocation. (https://github.com/velero-io/velero/issues/8091)
+ * Users now are allowed to configure the intervals of an effective maintenance in the way of `normalGC`, `fastGC` and `eagerGC`, through the `fullMaintenanceInterval` parameter in backupRepository configuration. (https://github.com/velero-io/velero/issues/8364)
 
 #### Volume Policy enhancement of filtering volumes by PVC labels
-In v1.16, Volume Policy is extended to support filtering volumes by PVC labels. (https://github.com/vmware-tanzu/velero/issues/8256).   
+In v1.16, Volume Policy is extended to support filtering volumes by PVC labels. (https://github.com/velero-io/velero/issues/8256).   
 
 #### Resource Status restore per object
-In v1.16, users are allowed to define whether to restore resource status per object through an annotation `velero.io/restore-status` set on the object. (https://github.com/vmware-tanzu/velero/issues/8204).  
+In v1.16, users are allowed to define whether to restore resource status per object through an annotation `velero.io/restore-status` set on the object. (https://github.com/velero-io/velero/issues/8204).  
 
 #### Velero Restore Helper binary is merged into Velero image 
-In v1.16, Velero banaries, i.e., velero, velero-helper and velero-restore-helper, are all included into the single Velero image. (https://github.com/vmware-tanzu/velero/issues/8484).  
+In v1.16, Velero banaries, i.e., velero, velero-helper and velero-restore-helper, are all included into the single Velero image. (https://github.com/velero-io/velero/issues/8484).  
 
 ### Runtime and dependencies
 Golang runtime: 1.23.7  

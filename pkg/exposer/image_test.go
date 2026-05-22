@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/vmware-tanzu/velero/pkg/util/kube"
+	"github.com/velero-io/velero/pkg/util/kube"
 
 	appsv1api "k8s.io/api/apps/v1"
 	corev1api "k8s.io/api/core/v1"

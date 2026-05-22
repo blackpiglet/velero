@@ -29,8 +29,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	velerotypes "github.com/vmware-tanzu/velero/pkg/types"
-	"github.com/vmware-tanzu/velero/pkg/util/kube"
+	velerotypes "github.com/velero-io/velero/pkg/types"
+	"github.com/velero-io/velero/pkg/util/kube"
 )
 
 const (

@@ -21,7 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/vmware-tanzu/velero/test/util/metrics"
+	"github.com/velero-io/velero/test/util/metrics"
 )
 
 const NFSDesc = "NFS disk usage"

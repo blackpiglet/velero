@@ -931,7 +931,7 @@ For 3, Velero leverage on DMs to decide how to save the log, but they will not g
 DMs need to be configured during installation so that they can be installed. Plugin DMs may have their own configuration, for VGDM, the only requirement is to install Velero node-agent.  
 Moreover, the DMP is also required during the installation.  
 
-From release-1.14, the `github.com/vmware-tanzu/velero-plugin-for-csi` repository, which is the Velero CSI plugin, is merged into the `github.com/vmware-tanzu/velero` repository.
+From release-1.14, the `github.com/velero-io/velero-plugin-for-csi` repository, which is the Velero CSI plugin, is merged into the `github.com/velero-io/velero` repository.
 The reason to merge the CSI plugin is:
 * The VolumeSnapshot data mover depends on the CSI plugin, it's reasonabe to integrate them.
 * This change reduces the Velero deploying complexity.

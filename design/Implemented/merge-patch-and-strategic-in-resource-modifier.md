@@ -49,7 +49,7 @@ This proposal is to add support for JSON Merge Patch and Strategic Merge Patch i
 - New fields `MergePatches` and `StrategicPatches` will be added to the `ResourceModifierRule` struct to support all three patch types.
 - Only one of the three patch types can be specified in a single `ResourceModifierRule`.
 - Add wildcard support for `groupResource` in `conditions` struct.
-- The workflow to create Resource Modifier ConfigMap and reference it in RestoreSpec will remain the same as described in document [Resource Modifiers](https://github.com/vmware-tanzu/velero/blob/main/site/content/docs/main/restore-resource-modifiers.md).
+- The workflow to create Resource Modifier ConfigMap and reference it in RestoreSpec will remain the same as described in document [Resource Modifiers](https://github.com/velero-io/velero/blob/main/site/content/docs/main/restore-resource-modifiers.md).
 
 ### How to choose the right patch type
 - [JSON Merge Patch](https://datatracker.ietf.org/doc/html/rfc7386) is a naively simple format, with limited usability. Probably it is a good choice if you are building something small, with very simple JSON Schema.
@@ -187,7 +187,7 @@ Compatible with current Resource Modifiers.
 
 ## Future enhancements
 - add a Velero subcommand to generate/validate the patchData for Strategic Merge Patch and JSON Merge Patch.
-- add jq support for more complex conditions or patches, to meet the situations that the current conditions or patches can not handle. like [this issue](https://github.com/vmware-tanzu/velero/issues/6344)
+- add jq support for more complex conditions or patches, to meet the situations that the current conditions or patches can not handle. like [this issue](https://github.com/velero-io/velero/issues/6344)
 
 ## Open Issues
 N/A

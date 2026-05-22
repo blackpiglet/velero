@@ -27,9 +27,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/vmware-tanzu/velero/internal/volume"
-	velerotest "github.com/vmware-tanzu/velero/test"
-	velero "github.com/vmware-tanzu/velero/test/util/velero"
+	"github.com/velero-io/velero/internal/volume"
+	velerotest "github.com/velero-io/velero/test"
+	velero "github.com/velero-io/velero/test/util/velero"
 )
 
 type ObjectsInStorage interface {

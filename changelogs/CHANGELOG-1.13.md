@@ -2,7 +2,7 @@
 ### 2024-01-10
 
 ### Download
-https://github.com/vmware-tanzu/velero/releases/tag/v1.13.0
+https://github.com/velero-io/velero/releases/tag/v1.13.0
 
 ### Container Image
 `velero/velero:v1.13.0`
@@ -16,7 +16,7 @@ https://velero.io/docs/v1.13/upgrade-to-1.13/
 ### Highlights
 
 #### Resource Modifier Enhancement
-Velero introduced the Resource Modifiers in v1.12.0. This feature allows users to specify a ConfigMap with a set of rules to modify the resources during restoration. However, only the JSON Patch is supported when creating the rules, and JSON Patch has some limitations, which cannot cover all use cases. In v1.13.0, Velero adds new support for JSON Merge Patch and Strategic Merge Patch, which provide more power and flexibility and allow users to use the same ConfigMap to apply patches on the resources. More design details can be found in [Support JSON Merge Patch and Strategic Merge Patch in Resource Modifiers](https://github.com/vmware-tanzu/velero/blob/main/design/Implemented/merge-patch-and-strategic-in-resource-modifier.md) design. For instructions on how to use the feature, please refer to the [Resource Modifiers](https://velero.io/docs/v1.13/restore-resource-modifiers/) doc.
+Velero introduced the Resource Modifiers in v1.12.0. This feature allows users to specify a ConfigMap with a set of rules to modify the resources during restoration. However, only the JSON Patch is supported when creating the rules, and JSON Patch has some limitations, which cannot cover all use cases. In v1.13.0, Velero adds new support for JSON Merge Patch and Strategic Merge Patch, which provide more power and flexibility and allow users to use the same ConfigMap to apply patches on the resources. More design details can be found in [Support JSON Merge Patch and Strategic Merge Patch in Resource Modifiers](https://github.com/velero-io/velero/blob/main/design/Implemented/merge-patch-and-strategic-in-resource-modifier.md) design. For instructions on how to use the feature, please refer to the [Resource Modifiers](https://velero.io/docs/v1.13/restore-resource-modifiers/) doc.
 
 #### Node-Agent Concurrency
 Velero data movement activities from fs-backups and CSI snapshot data movements run in Velero node-agent, so may be hosted by every node in the cluster and consume resources (i.e. CPU, memory, network bandwidth) from there. With v1.13, users are allowed to configure how many data movement activities (a.k.a, loads) run in each node globally or by node, so that users can better leverage the performance of Velero data movement activities and the resource consumption in the cluster. For more information, check the [Node-Agent Concurrency](https://velero.io/docs/v1.13/node-agent-concurrency/) document. 
@@ -57,8 +57,8 @@ To fix CVEs and keep pace with Golang, Velero made changes as follows:
 
 ### Breaking changes
 * Backup describe command: due to the backup describe output enhancement, some existing information (i.e. the output for native snapshot, CSI snapshot, and fs-backup) has been moved to the Backup Volumes section with some format changes.
-* API type changes: changes the field [DataMoverConfig](https://github.com/vmware-tanzu/velero/blob/v1.13.0/pkg/apis/velero/v2alpha1/data_upload_types.go#L54) in DataUploadSpec from `*map[string][string]`` to `map[string]string`
-* Velero install command: due to the issue [#7264](https://github.com/vmware-tanzu/velero/issues/7264), v1.13.0 introduces a break change that make the informer cache enabled by default to keep the actual behavior consistent with the helper message(the informer cache is disabled by default before the change).
+* API type changes: changes the field [DataMoverConfig](https://github.com/velero-io/velero/blob/v1.13.0/pkg/apis/velero/v2alpha1/data_upload_types.go#L54) in DataUploadSpec from `*map[string][string]`` to `map[string]string`
+* Velero install command: due to the issue [#7264](https://github.com/velero-io/velero/issues/7264), v1.13.0 introduces a break change that make the informer cache enabled by default to keep the actual behavior consistent with the helper message(the informer cache is disabled by default before the change).
 
 
 ### Limitations/Known issues

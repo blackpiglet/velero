@@ -2,7 +2,7 @@
 ### 2022-11-23
 
 ### Download
-https://github.com/vmware-tanzu/velero/releases/tag/v1.10.0
+https://github.com/velero-io/velero/releases/tag/v1.10.0
 
 ### Container Image
 `velero/velero:v1.10.0`
@@ -20,7 +20,7 @@ In this release, we introduced the Unified Repository architecture to build a da
 
 In this release, we also deeply integrate Velero with Kopia, specifically, Kopia's uploader modules are isolated as a generic file system uploader; Kopia's repository modules are encapsulated as the unified backup repository.
 
-For more information, refer to the [design document](https://github.com/vmware-tanzu/velero/blob/v1.10.0/design/unified-repo-and-kopia-integration/unified-repo-and-kopia-integration.md).
+For more information, refer to the [design document](https://github.com/velero-io/velero/blob/v1.10.0/design/unified-repo-and-kopia-integration/unified-repo-and-kopia-integration.md).
 
 #### File system backup refactor
 Velero's file system backup (a.k.s. pod volume backup or formerly restic backup) is refactored as the first user of the Unified Repository architecture. Specifically, we added a new path, the Kopia path, besides the existing Restic path. While Restic path is still available and set as default, you can opt in Kopia path by specifying the `uploader-type` parameter at installation time. Meanwhile, you are free to restore from existing backups under either path, Velero dynamically switches to the correct path to process the restore.
@@ -33,7 +33,7 @@ Meanwhile, we've created a performance guide for both Restic path and Kopia path
 
 #### Plugin versioning V1 refactor
 In this release, Velero moves plugins BackupItemAction, RestoreItemAction and VolumeSnapshotterAction to version v1, this allows future plugin changes that do not support backward compatibility, so is a preparation for various complex tasks, for example, data movement tasks.
-For more information, refer to the [plugin versioning design document](https://github.com/vmware-tanzu/velero/blob/v1.10.0/design/plugin-versioning.md).
+For more information, refer to the [plugin versioning design document](https://github.com/velero-io/velero/blob/v1.10.0/design/plugin-versioning.md).
 
 #### Refactor the controllers using Kubebuilder v3
 In this release we continued our code modernization work, rewriting some controllers using Kubebuilder v3. This work is ongoing and we will continue to make progress in future releases.
@@ -75,9 +75,9 @@ Due to file system backup refactor, below modules and parameters name have been 
 Due to the major changes of file system backup, the old upgrade steps are not suitable any more. For the new upgrade steps, visit [v1.10 upgrade guide document](https://velero.io/docs/v1.10/upgrade-to-1.10/).
 
 #### Limitations/Known issues
-In this release, Kopia backup repository (so the Kopia path of file system backup) doesn't support self signed certificate for S3 compatible storage. To track this problem, refer to this [Velero issue](https://github.com/vmware-tanzu/velero/issues/5123) or [Kopia issue](https://github.com/kopia/kopia/issues/1443). 
+In this release, Kopia backup repository (so the Kopia path of file system backup) doesn't support self signed certificate for S3 compatible storage. To track this problem, refer to this [Velero issue](https://github.com/velero-io/velero/issues/5123) or [Kopia issue](https://github.com/kopia/kopia/issues/1443). 
 
-Due to the code change in Velero, there will be some code change required in vSphere plugin, without which the functionality may be impacted.  Therefore, if you are using vSphere plugin in your workflow, please hold the upgrade until the issue [#485](https://github.com/vmware-tanzu/velero-plugin-for-vsphere/issues/485) is fixed in vSphere plugin.
+Due to the code change in Velero, there will be some code change required in vSphere plugin, without which the functionality may be impacted.  Therefore, if you are using vSphere plugin in your workflow, please hold the upgrade until the issue [#485](https://github.com/velero-io/velero-plugin-for-vsphere/issues/485) is fixed in vSphere plugin.
 
 ### All changes
   
@@ -185,6 +185,6 @@ Related issue: #2413 (#5178, @allenxu404)
   * Delete opened issues triage action. (#5041, @jxun)
   * When spec.RestoreStatus is empty, don't restore status (#5008, @sseago)
   * Added DownloadTargetKindCSIBackupVolumeSnapshots for retrieving the signed URL to download only the `<backup name>`-csi-volumesnapshots.json.gz  and DownloadTargetKindCSIBackupVolumeSnapshotContents to download only `<backup name>`-csi-volumesnapshotcontents.json.gz in the DownloadRequest CR structure. These files are already present in the backup layout.  (#4980, @anshulahuja98)
-  * Refactor BackupItemAction proto and related code to backupitemaction/v1 package.  This is part of implementation of the plugin version design https://github.com/vmware-tanzu/velero/blob/main/design/plugin-versioning.md (#4943, @phuongatemc)
+  * Refactor BackupItemAction proto and related code to backupitemaction/v1 package.  This is part of implementation of the plugin version design https://github.com/velero-io/velero/blob/main/design/plugin-versioning.md (#4943, @phuongatemc)
   * Unified Repository Design (#4926, @Lyndon-Li)
   * Add credentials to volume snapshot locations (#4864, @sseago)

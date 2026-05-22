@@ -16,7 +16,7 @@ limitations under the License.
 
 package types
 
-import "github.com/vmware-tanzu/velero/pkg/util/kube"
+import "github.com/velero-io/velero/pkg/util/kube"
 
 type JobConfigs struct {
 	// LoadAffinities is the config for repository maintenance job load affinity.

@@ -1,4 +1,4 @@
-module github.com/vmware-tanzu/velero
+module github.com/velero-io/velero
 
 go 1.26.0
 

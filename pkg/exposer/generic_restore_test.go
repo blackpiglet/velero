@@ -32,9 +32,9 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	clientTesting "k8s.io/client-go/testing"
 
-	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
-	velerotest "github.com/vmware-tanzu/velero/pkg/test"
-	"github.com/vmware-tanzu/velero/pkg/util/kube"
+	velerov1 "github.com/velero-io/velero/pkg/apis/velero/v1"
+	velerotest "github.com/velero-io/velero/pkg/test"
+	"github.com/velero-io/velero/pkg/util/kube"
 )
 
 func TestRestoreExpose(t *testing.T) {

@@ -39,13 +39,13 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
-	"github.com/vmware-tanzu/velero/pkg/cmd/cli/install"
-	velerexec "github.com/vmware-tanzu/velero/pkg/util/exec"
-	"github.com/vmware-tanzu/velero/test"
-	common "github.com/vmware-tanzu/velero/test/util/common"
-	eksutil "github.com/vmware-tanzu/velero/test/util/eks"
-	"github.com/vmware-tanzu/velero/test/util/k8s"
+	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
+	"github.com/velero-io/velero/pkg/cmd/cli/install"
+	velerexec "github.com/velero-io/velero/pkg/util/exec"
+	"github.com/velero-io/velero/test"
+	common "github.com/velero-io/velero/test/util/common"
+	eksutil "github.com/velero-io/velero/test/util/eks"
+	"github.com/velero-io/velero/test/util/k8s"
 )
 
 // we provide more install options other than the standard install.InstallOptions in E2E test
@@ -222,7 +222,7 @@ func VeleroInstall(ctx context.Context, veleroCfg *test.VeleroConfig, isStandbyC
 }
 
 // generateVSpherePlugin refers to
-// https://github.com/vmware-tanzu/velero-plugin-for-vsphere/blob/v1.3.0/docs/vanilla.md
+// https://github.com/velero-io/velero-plugin-for-vsphere/blob/v1.3.0/docs/vanilla.md
 func generateVSpherePlugin(veleroCfg *test.VeleroConfig) error {
 	cli := veleroCfg.ClientToInstallVelero
 
@@ -927,7 +927,7 @@ func VeleroUninstall(ctx context.Context, veleroCfg test.VeleroConfig) error {
 }
 
 // createVCCredentialSecret refer to
-// https://github.com/vmware-tanzu/velero-plugin-for-vsphere/blob/v1.3.0/docs/vanilla.md
+// https://github.com/velero-io/velero-plugin-for-vsphere/blob/v1.3.0/docs/vanilla.md
 func createVCCredentialSecret(c clientset.Interface, veleroNamespace string) error {
 	secret, err := getVCCredentialSecret(c)
 	if err != nil {
@@ -970,7 +970,7 @@ func createVCCredentialSecret(c clientset.Interface, veleroNamespace string) err
 	return nil
 }
 
-// Reference https://github.com/vmware-tanzu/velero-plugin-for-vsphere/blob/main/docs/vanilla.md#create-vc-credential-secret
+// Reference https://github.com/velero-io/velero-plugin-for-vsphere/blob/main/docs/vanilla.md#create-vc-credential-secret
 // Read secret from kube-system namespace first, if not found, try with vmware-system-csi.
 func getVCCredentialSecret(c clientset.Interface) (secret *corev1api.Secret, err error) {
 	secret, err = k8s.GetSecret(c, test.KubeSystemNamespace, "vsphere-config-secret")

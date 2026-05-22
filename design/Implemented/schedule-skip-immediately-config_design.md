@@ -6,7 +6,7 @@ New Schedules also create new backup immediately.
 This design allows user to *skip **immediately due** backup run upon unpausing or schedule creation*.
 
 ## Background
-Currently, the default behavior of schedule when `.Status.LastBackup` is nil or is due immediately after unpausing, a backup will be created. This may not be a desired by all users (https://github.com/vmware-tanzu/velero/issues/6517)
+Currently, the default behavior of schedule when `.Status.LastBackup` is nil or is due immediately after unpausing, a backup will be created. This may not be a desired by all users (https://github.com/velero-io/velero/issues/6517)
 
 User want ability to skip the first immediately due backup when schedule is unpaused and or created.
 

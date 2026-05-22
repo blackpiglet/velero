@@ -2,7 +2,7 @@
 ### 2021-09-07
 
 ### Download
-https://github.com/vmware-tanzu/velero/releases/tag/v1.7.0
+https://github.com/velero-io/velero/releases/tag/v1.7.0
 
 ### Container Image
 `velero/velero:v1.7.0`
@@ -75,6 +75,6 @@ This command collects information about a Velero installation, such as pod logs 
   * 🐛 Fix plugin name derivation from image name (#3711, @ashish-amarnath)
   * ✨ ⚠️ Remove CSI volumesnapshot artifact deletion
 
-This change requires https://github.com/vmware-tanzu/velero-plugin-for-csi/pull/86 for Velero to continue
+This change requires https://github.com/velero-io/velero-plugin-for-csi/pull/86 for Velero to continue
 deleting of CSI volumesnapshots when the corresponding backups are deleted. (#3734, @ashish-amarnath)
   * use unstructured to marshal selective fields for service restore action (#3789, @alaypatel07)

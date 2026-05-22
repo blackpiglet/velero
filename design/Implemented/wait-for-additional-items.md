@@ -44,7 +44,7 @@ When each `RestoreItemAction` `Execute()` call returns, the
 restored. After restoring these items, Velero needs to be able to wait
 for them to be ready before moving on to the next item. Right after
 looping over the additional items at
-https://github.com/vmware-tanzu/velero/blob/main/pkg/restore/restore.go#L960-L991
+https://github.com/velero-io/velero/blob/main/pkg/restore/restore.go#L960-L991
 
 we still have a reference to the additional items (`GroupResource` and
 namespaced name), as well as a reference to the `RestoreItemAction`
@@ -53,7 +53,7 @@ plugin which required it.
 At this point, if the `RestoreItemActionExecuteOutput`
 `WaitForAdditionalItems` field is set to `true` we need to call a func
 similar to `crdAvailable` which we will call `itemsAvailable`
-https://github.com/vmware-tanzu/velero/blob/main/pkg/restore/restore.go#L623
+https://github.com/velero-io/velero/blob/main/pkg/restore/restore.go#L623
 This func should also be defined within restore.go
 
 Instead of the one minute CRD timeout, we'll use a timeout specific to
@@ -182,7 +182,7 @@ use an explicit `AreAdditionalItemsReady` func. Since this will break
 backwards compatibility with current `RestoreItemAction` plugins,
 implementation of this feature should wait until Velero plugin
 versioning, as described in
-https://github.com/vmware-tanzu/velero/issues/3285 is
+https://github.com/velero-io/velero/issues/3285 is
 implemented. With plugin versioning in place, existing (non-versioned
 or 1.0-versioned) `RestoreItemAction` plugins which do not define
 `AreAdditionalItemsReady` would be able to coexist with a

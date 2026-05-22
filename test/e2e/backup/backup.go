@@ -25,11 +25,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "github.com/vmware-tanzu/velero/test"
-	"github.com/vmware-tanzu/velero/test/util/common"
-	. "github.com/vmware-tanzu/velero/test/util/k8s"
-	. "github.com/vmware-tanzu/velero/test/util/kibishii"
-	. "github.com/vmware-tanzu/velero/test/util/velero"
+	. "github.com/velero-io/velero/test"
+	"github.com/velero-io/velero/test/util/common"
+	. "github.com/velero-io/velero/test/util/k8s"
+	. "github.com/velero-io/velero/test/util/kibishii"
+	. "github.com/velero-io/velero/test/util/velero"
 )
 
 type BackupRestoreTestConfig struct {
@@ -208,7 +208,7 @@ func BackupRestoreTest(backupRestoreTestConfig BackupRestoreTestConfig) {
 			)).To(Succeed())
 
 			// We limit the length of backup name here to avoid the issue of vsphere plugin
-			// https://github.com/vmware-tanzu/velero-plugin-for-vsphere/issues/370
+			// https://github.com/velero-io/velero-plugin-for-vsphere/issues/370
 			// We can remove the logic once the issue is fixed
 			backupName = "backup-" + common.AdditionalBSLName
 			restoreName = "restore-" + common.AdditionalBSLName

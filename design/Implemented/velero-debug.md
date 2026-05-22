@@ -3,7 +3,7 @@
 ## Abstract
 To simplify the communication between velero users and developers, this document proposes the `velero debug` command to generate a tarball including the logs needed for debugging.
 
-Github issue: https://github.com/vmware-tanzu/velero/issues/675
+Github issue: https://github.com/velero-io/velero/issues/675
 
 ## Background
 Gathering information to troubleshoot a Velero deployment is currently spread across multiple commands, and is not very efficient. Logs for the Velero server itself are accessed via a kubectl logs command, while information on specific backups or restores are accessed via a Velero subcommand. Restic logs are even more complicated to retrieve, since one must gather logs for every instance of the daemonset, and there’s currently no good mechanism to locate which node a particular restic backup ran against.  

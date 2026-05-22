@@ -23,7 +23,7 @@ import (
 	corev1api "k8s.io/api/core/v1"
 	apimachineryRuntime "k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/vmware-tanzu/velero/pkg/label"
+	"github.com/velero-io/velero/pkg/label"
 )
 
 // ContainerBuilder builds Container objects

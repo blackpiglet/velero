@@ -9,7 +9,7 @@ This new additional metadata file is needed when:
 * Retrieve the PV's snapshot information for backup.
 
 ## Background
-There is already a [PR](https://github.com/vmware-tanzu/velero/pull/6496) to track the skipped PVC in the backup. This design will depend on it and go further to get a summary of PVC and PV information, then persist into a metadata file in the backup repository.
+There is already a [PR](https://github.com/velero-io/velero/pull/6496) to track the skipped PVC in the backup. This design will depend on it and go further to get a summary of PVC and PV information, then persist into a metadata file in the backup repository.
 
 In the restore process, the Velero server needs to decide how the PV resource should be restored according to how the PV is backed up. The current logic is to check whether it's backed up by Velero-native snapshot, by file-system backup, or having `DeletionPolicy` set as `Delete`.
 
@@ -28,7 +28,7 @@ Another thing that needs noticing is when describing the backup, there is no gen
 ## High-Level Design
 Create _backup-name_-volumes-info.json metadata file in the backup's repository. This file will be encoded to contain all the PVC and PV information included in the backup. The information covers whether the PV or PVC's data is skipped during backup, how its data is backed up, and the backed-up detail information.
 
-Please notice that the new metadata file includes all skipped volume information. This is used to address [the second phase needs of skipped volumes information](https://github.com/vmware-tanzu/velero/issues/5834#issuecomment-1526624211).
+Please notice that the new metadata file includes all skipped volume information. This is used to address [the second phase needs of skipped volumes information](https://github.com/velero-io/velero/issues/5834#issuecomment-1526624211).
 
 The `restoreItem` function can decode the _backup-name_-volumes-info.json file to determine how to handle the PV resource. 
 
@@ -169,13 +169,13 @@ After introducing the VolumeInfo array, the following logic will be added.
 _backup-name_-volumes-info.json file is deleted during backup deletion.
 
 ## Alternatives Considered
-The restore process needs more information about how the PVs are backed up to determine whether this PV should be restored. The released branches also need a similar function, but backporting a new feature into previous releases may not be a good idea, so according to [Anshul Ahuja's suggestion](https://github.com/vmware-tanzu/velero/issues/6595#issuecomment-1731081580), adding more cases here to support checking PV backed-up by CSI plugin and CSI snapshot data mover: https://github.com/vmware-tanzu/velero/blob/5ff5073cc3f364bafcfbd26755e2a92af68ba180/pkg/restore/restore.go#L1206-L1324.
+The restore process needs more information about how the PVs are backed up to determine whether this PV should be restored. The released branches also need a similar function, but backporting a new feature into previous releases may not be a good idea, so according to [Anshul Ahuja's suggestion](https://github.com/velero-io/velero/issues/6595#issuecomment-1731081580), adding more cases here to support checking PV backed-up by CSI plugin and CSI snapshot data mover: https://github.com/velero-io/velero/blob/5ff5073cc3f364bafcfbd26755e2a92af68ba180/pkg/restore/restore.go#L1206-L1324.
 
 ## Security Considerations
 There should be no security impact introduced by this design.
 
 ## Compatibility
-After this design is implemented, there should be no impact on the existing [skipped PVC summary feature](https://github.com/vmware-tanzu/velero/pull/6496).
+After this design is implemented, there should be no impact on the existing [skipped PVC summary feature](https://github.com/velero-io/velero/pull/6496).
 
 To support older version backup, which doesn't have the VolumeInfo metadata file, the old logic, which is checking the Velero native snapshots list, PodVolumeBackup list, and PVC DeletionPolicy, is still kept, and supporting CSI snapshots and snapshot data mover logic will be added too.
 

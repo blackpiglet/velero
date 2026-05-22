@@ -2,7 +2,7 @@
 ### 2022-06-13
 
 ### Download
-https://github.com/vmware-tanzu/velero/releases/tag/v1.9.0
+https://github.com/velero-io/velero/releases/tag/v1.9.0
 
 ### Container Image
 `velero/velero:v1.9.0`
@@ -20,7 +20,7 @@ https://velero.io/docs/v1.9/upgrade-to-1.9/
 - No VolumeSnapshot will be left in the source namespace of the workload
 - Report metrics for CSI snapshots
 
-More improvements please refer to [CSI plugin improvement](https://github.com/vmware-tanzu/velero/issues?q=is%3Aissue+label%3A%22CSI+plugin+-+GA+-+phase1%22+is%3Aclosed)
+More improvements please refer to [CSI plugin improvement](https://github.com/velero-io/velero/issues?q=is%3Aissue+label%3A%22CSI+plugin+-+GA+-+phase1%22+is%3Aclosed)
 
 With these improvements we'll provide official support for CSI snapshots on AKS/EKS clusters. (with CSI plugin v0.3.0)
 

@@ -23,10 +23,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kbclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
-	"github.com/vmware-tanzu/velero/pkg/client"
-	"github.com/vmware-tanzu/velero/pkg/cmd"
-	"github.com/vmware-tanzu/velero/pkg/cmd/util/output"
+	api "github.com/velero-io/velero/pkg/apis/velero/v1"
+	"github.com/velero-io/velero/pkg/client"
+	"github.com/velero-io/velero/pkg/cmd"
+	"github.com/velero-io/velero/pkg/cmd/util/output"
 )
 
 func NewGetCommand(f client.Factory, use string) *cobra.Command {

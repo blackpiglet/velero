@@ -39,8 +39,8 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 
-	"github.com/vmware-tanzu/velero/pkg/cmd/util/flag"
-	. "github.com/vmware-tanzu/velero/test"
+	"github.com/velero-io/velero/pkg/cmd/util/flag"
+	. "github.com/velero-io/velero/test"
 )
 
 type AzureStorage string

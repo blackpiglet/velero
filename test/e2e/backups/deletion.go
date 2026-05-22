@@ -27,11 +27,11 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 
-	. "github.com/vmware-tanzu/velero/test"
-	. "github.com/vmware-tanzu/velero/test/util/k8s"
-	. "github.com/vmware-tanzu/velero/test/util/kibishii"
-	. "github.com/vmware-tanzu/velero/test/util/providers"
-	. "github.com/vmware-tanzu/velero/test/util/velero"
+	. "github.com/velero-io/velero/test"
+	. "github.com/velero-io/velero/test/util/k8s"
+	. "github.com/velero-io/velero/test/util/kibishii"
+	. "github.com/velero-io/velero/test/util/providers"
+	. "github.com/velero-io/velero/test/util/velero"
 )
 
 // Test backup and restore of Kibishii using restic

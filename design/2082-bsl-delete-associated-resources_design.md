@@ -20,7 +20,7 @@ Update the `velero backup-location delete <bsl name>` command to delete associat
 
 ## Non Goals
 
-[It was suggested](https://github.com/vmware-tanzu/velero/issues/2082#issuecomment-827951311) to fix bug #2697 alongside this issue.
+[It was suggested](https://github.com/velero-io/velero/issues/2082#issuecomment-827951311) to fix bug #2697 alongside this issue.
 However, I think that should be fixed separately because although it is similar (restore objects are not being deleted), it is also quite different.
 One is adding a command feature update (this issue) and the other is a bug fix and each affect different parts of the code base.
 
@@ -31,7 +31,7 @@ Update the `velero backup-location delete <bsl name>` command to do the followin
 - find in the same Velero namespace from which the BSL was deleted the associated backup resources and Restic repositories, called "backups.velero.io" and "resticrepositories.velero.io" respectively
 - delete the resources found
 
-The above logic will be added to [where BSLs are deleted](https://github.com/vmware-tanzu/velero/blob/main/pkg/cmd/cli/backuplocation/delete.go).
+The above logic will be added to [where BSLs are deleted](https://github.com/velero-io/velero/blob/main/pkg/cmd/cli/backuplocation/delete.go).
 
 ## Alternative Considered
 

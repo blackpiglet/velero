@@ -526,24 +526,24 @@ updates. Here is a list of some of these items:
 1. Consts for the "Uploading" and "UploadingPartiallyFailed" phases have already been defined. These
    will need to be removed when the "WaitingForPluginOperations" and
    "WaitingForPluginOperationsPartiallyFailed" phases are defined.
-   - https://github.com/vmware-tanzu/velero/pull/3805
+   - https://github.com/velero-io/velero/pull/3805
 1. Remove the ItemSnapshotter plugin APIs (and related code) since the revised design will reuse
    VolumeSnapshotter and BackupItemAction plugins.
-   - https://github.com/vmware-tanzu/velero/pull/4077
-   - https://github.com/vmware-tanzu/velero/pull/4417
+   - https://github.com/velero-io/velero/pull/4077
+   - https://github.com/velero-io/velero/pull/4417
 1. UploadProgressFeatureFlag shouldn't be needed anymore. The current design won't really need a
    feature flag here -- the new features will be added to V2 of the VolumeSnapshotter,
    BackupItemAction, and RestoreItemAction plugins, and it will only be used if there are plugins which
    return operation IDs.
-   - https://github.com/vmware-tanzu/velero/pull/4416
+   - https://github.com/velero-io/velero/pull/4416
 1. Adds <backup-name>-itemsnapshots.gz file to backup (when provided) -- this is still part of the
    revised design, so it should stay.
-   - https://github.com/vmware-tanzu/velero/pull/4429
+   - https://github.com/velero-io/velero/pull/4429
 1. Upload Progress Monitoring and Item Snapshotter basic support: This PR is not yet merged, so
    nothing will need to be reverted. While the implementation here will be useful in informing the
    implementation of the new design, several things have changed in the design proposal since the PR
    was written.
-   - https://github.com/vmware-tanzu/velero/pull/4467
+   - https://github.com/velero-io/velero/pull/4467
 
 # Implementation tasks
 

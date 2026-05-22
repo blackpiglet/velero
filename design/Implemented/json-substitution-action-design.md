@@ -150,7 +150,7 @@ Compatibility with existing StorageClass mapping RestoreItemAction and similar p
 
 ## Implementation
 - Changes in Restore CRD. Add a new field to the RestoreSpec to reference the configmap.
-- One example of where code will be modified:  https://github.com/vmware-tanzu/velero/blob/eeee4e06d209df7f08bfabda326b27aaf0054759/pkg/restore/restore.go#L1266 On the obj before Creation, we can apply the conditions to check if the resource is filtered out using given parameters. Then using JsonPatch provided, we can update the resource.
+- One example of where code will be modified:  https://github.com/velero-io/velero/blob/eeee4e06d209df7f08bfabda326b27aaf0054759/pkg/restore/restore.go#L1266 On the obj before Creation, we can apply the conditions to check if the resource is filtered out using given parameters. Then using JsonPatch provided, we can update the resource.
 - For Jsonpatch - https://github.com/evanphx/json-patch library is used.
 - JSON Patch RFC https://datatracker.ietf.org/doc/html/rfc6902
 

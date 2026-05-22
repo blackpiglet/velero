@@ -138,12 +138,12 @@ If we instead wanted to use an unique file each time, we could work around the o
 
 Once the credentials have been serialized, this path will be made available to the plugins.
 Instead of setting the necessary environment variable for the plugin process, the `config` map for the BSL will be modified to include an addiitional entry with the path to the credentials file: `credentialsFile`.
-This will be passed through when [initializing the BSL](https://github.com/vmware-tanzu/velero/blob/main/pkg/plugin/velero/object_store.go#L27-L30) and it will be the responsibility of the plugin to use the passed credentials when starting a session.
-For an example of how this would affect the AWS plugin, see [this PR](https://github.com/vmware-tanzu/velero-plugin-for-aws/pull/69).
+This will be passed through when [initializing the BSL](https://github.com/velero-io/velero/blob/main/pkg/plugin/velero/object_store.go#L27-L30) and it will be the responsibility of the plugin to use the passed credentials when starting a session.
+For an example of how this would affect the AWS plugin, see [this PR](https://github.com/velero-io/velero-plugin-for-aws/pull/69).
 
 The restic controllers will also need to be updated to use the correct credentials.
 The BackupStorageLocation for a given PVB/PVR will be fetched and the `Credential` field from that BSL will be serialized.
-The existing setup for the restic commands use the credentials from the environment variables with [some repo provider specific overrides](https://github.com/vmware-tanzu/velero/blob/main/pkg/controller/pod_volume_backup_controller.go#L260-L273).
+The existing setup for the restic commands use the credentials from the environment variables with [some repo provider specific overrides](https://github.com/velero-io/velero/blob/main/pkg/controller/pod_volume_backup_controller.go#L260-L273).
 Instead of relying on the existing environment variables, if there are credentials for a particular BSL, the environment will be specifically created for each `RepoIdentifier`.
 This will use a lot of the existing logic with the exception that it will be modified to work with a serialized secret rather than find the secret file from an environment variable.
 Currently, GCP is the only provider that relies on the existing environment variables with no specific overrides.
@@ -214,16 +214,16 @@ Prior to using any secret for a BSL, it will need to be serialized to disk.
 Using the details in the `Credential` field in the BSL, the contents of the Secret will be read and serialized to a file.
 Each plugin process would still have the same set of environment variables set, however the value used for each of these variables would instead be the path to the serialized secret.
 
-To set the environment variables for a plugin process, the plugin manager must be modified so that when creating an ObjectStore, we pass in the entire BSL object, rather than [just the provider](https://github.com/vmware-tanzu/velero/blob/main/pkg/plugin/clientmgmt/manager.go#L132-L158).
-The plugin manager currently stores a map of [plugin executables to an associated `RestartableProcess`](https://github.com/vmware-tanzu/velero/blob/main/pkg/plugin/clientmgmt/manager.go#L59-L70).
-New restartable processes are created only [with the executable that the process would run](https://github.com/vmware-tanzu/velero/blob/main/pkg/plugin/clientmgmt/manager.go#L122).
-This could be modified to also take the necessary environment variables so that when [underlying go-plugin process is created](https://github.com/vmware-tanzu/velero/blob/main/pkg/plugin/clientmgmt/client_builder.go#L78), these environment variables could be provided and would be set on the plugin process.
+To set the environment variables for a plugin process, the plugin manager must be modified so that when creating an ObjectStore, we pass in the entire BSL object, rather than [just the provider](https://github.com/velero-io/velero/blob/main/pkg/plugin/clientmgmt/manager.go#L132-L158).
+The plugin manager currently stores a map of [plugin executables to an associated `RestartableProcess`](https://github.com/velero-io/velero/blob/main/pkg/plugin/clientmgmt/manager.go#L59-L70).
+New restartable processes are created only [with the executable that the process would run](https://github.com/velero-io/velero/blob/main/pkg/plugin/clientmgmt/manager.go#L122).
+This could be modified to also take the necessary environment variables so that when [underlying go-plugin process is created](https://github.com/velero-io/velero/blob/main/pkg/plugin/clientmgmt/client_builder.go#L78), these environment variables could be provided and would be set on the plugin process.
 
 Taking this approach would not require any changes from plugins as the credentials information would be made available to them in the same way.
 However, it is quite a significant change in how we initialize and invoke plugins.
 
 We would also need to ensure that the restic controllers are updated in the same way so that correct credentials are used (when creating a `ResticRepository` or processing `PodVolumeBackup`/`PodVolumeRestore`).
-This could be achieved by modifying the existing function to [run a restic command](https://github.com/vmware-tanzu/velero/blob/main/pkg/restic/repository_manager.go#L237-L290).
+This could be achieved by modifying the existing function to [run a restic command](https://github.com/velero-io/velero/blob/main/pkg/restic/repository_manager.go#L237-L290).
 This function already sets environment variables for the restic process depending on which storage provider is being used.
 
 #### Include the details of the secret in `config` map passed to a plugin

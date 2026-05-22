@@ -26,12 +26,12 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1api "k8s.io/api/core/v1"
 
-	"github.com/vmware-tanzu/velero/internal/credentials"
-	"github.com/vmware-tanzu/velero/internal/credentials/mocks"
-	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
-	"github.com/vmware-tanzu/velero/pkg/repository"
-	"github.com/vmware-tanzu/velero/pkg/repository/udmrepo"
-	udmrepomocks "github.com/vmware-tanzu/velero/pkg/repository/udmrepo/mocks"
+	"github.com/velero-io/velero/internal/credentials"
+	"github.com/velero-io/velero/internal/credentials/mocks"
+	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
+	"github.com/velero-io/velero/pkg/repository"
+	"github.com/velero-io/velero/pkg/repository/udmrepo"
+	udmrepomocks "github.com/velero-io/velero/pkg/repository/udmrepo/mocks"
 )
 
 func TestNewBlockUploaderProvider(t *testing.T) {

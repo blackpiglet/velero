@@ -7,7 +7,7 @@ If a patch call fails to update status to completion, it should be retried up to
 This design proposes a way to configure timeout for this retry time limit.
 
 ## Background
-Original Issue: https://github.com/vmware-tanzu/velero/issues/7207
+Original Issue: https://github.com/velero-io/velero/issues/7207
 
 Velero was performing a restore when the API server was rolling out to a new version.
 It had trouble connecting to the API server, but eventually, the restore was successful.
@@ -17,7 +17,7 @@ After the connection was restored, it didn't attempt to update, causing the rest
 This can lead to incorrect decisions for other components that rely on the backup/restore CR status to determine completion.
 
 ## Goals
-- Make timeout configurable for retry patching by reusing existing [`--resource-timeout` server flag](https://github.com/vmware-tanzu/velero/blob/d9ca14747925630664c9e4f85a682b5fc356806d/pkg/cmd/server/server.go#L245)
+- Make timeout configurable for retry patching by reusing existing [`--resource-timeout` server flag](https://github.com/velero-io/velero/blob/d9ca14747925630664c9e4f85a682b5fc356806d/pkg/cmd/server/server.go#L245)
 
 ## Non Goals
 - Create a new timeout flag
@@ -97,7 +97,7 @@ func RetryOnErrorMaxBackOff(maxDuration time.Duration, fn func() error) error {
 ```
 
 ## Alternatives Considered
- - Requeuing InProgress backups that is not known by current velero instance to still be in progress as failed (attempted in [#7863](https://github.com/vmware-tanzu/velero/pull/7863))
+ - Requeuing InProgress backups that is not known by current velero instance to still be in progress as failed (attempted in [#7863](https://github.com/velero-io/velero/pull/7863))
     - It was deemed as making backup restore flow hard to enhance for future reconciler updates such as adding cancel or adding parallel backups.
 
 ## Security Considerations
@@ -107,5 +107,5 @@ None
 Retry should only trigger a restore or backup that is already in progress and not patching successfully by current instance. Prior InProgress backups/restores will not be re-processed and will remain stuck InProgress until there is another velero server (re)start.
 
 ## Implementation
-There is a past implementation in [#7845](https://github.com/vmware-tanzu/velero/pull/7845/) where implementation for this design will be based upon.
+There is a past implementation in [#7845](https://github.com/velero-io/velero/pull/7845/) where implementation for this design will be based upon.
 

@@ -7,7 +7,7 @@ Velero currently treats namespace patterns with glob characters as literal strin
 
 ## Background
 
-Requested in [#1874](https://github.com/vmware-tanzu/velero/issues/1874) for more flexible namespace selection.
+Requested in [#1874](https://github.com/velero-io/velero/issues/1874) for more flexible namespace selection.
 
 ## Goals
 

@@ -20,7 +20,7 @@ This design reuses the data structure introduced by design [Velero Generic Data 
 - Let user can choose repository maintenance Job running on which nodes.
 
 ## Non Goals
-- There was an [issue](https://github.com/vmware-tanzu/velero/issues/7911) to require the whole Job's PodSpec should be configurable. That's not in the scope of this design.
+- There was an [issue](https://github.com/velero-io/velero/issues/7911) to require the whole Job's PodSpec should be configurable. That's not in the scope of this design.
 - Please notice this new configuration is dedicated for the repository maintenance. Repository itself configuration is not covered.
 
 
@@ -43,7 +43,7 @@ Propose to deprecate the `velero server` parameters `--maintenance-job-cpu-reque
 That means those parameters will be deleted in release-1.17.
 After deletion, those resources-related parameters are replaced by the ConfigMap specified by `velero server` CLI's parameter `--repo-maintenance-job-configmap`.
 `--keep-latest-maintenance-jobs` is deleted from `velero server` CLI. It turns into a non-configurable internal parameter, and its value is 3.
-Please check [issue 7923](https://github.com/vmware-tanzu/velero/issues/7923) for more information why deleting this parameter.
+Please check [issue 7923](https://github.com/velero-io/velero/issues/7923) for more information why deleting this parameter.
 
 ## Design
 This design introduces a new ConfigMap specified by `velero server` CLI parameter `--repo-maintenance-job-configmap` as the source of the repository maintenance job configuration. The specified ConfigMap is read from the namespace where Velero is installed.
@@ -92,7 +92,7 @@ The other keys in the map is the combination of three elements of a BackupReposi
 * The BackupRepository referenced BackupStorageLocation's name.
 * The BackupRepository's type. Possible values are `kopia` and `restic`.
 
-Those three keys can identify a [unique BackupRepository](https://github.com/vmware-tanzu/velero/blob/2fc6300f2239f250b40b0488c35feae59520f2d3/pkg/repository/backup_repo_op.go#L32-L37).
+Those three keys can identify a [unique BackupRepository](https://github.com/velero-io/velero/blob/2fc6300f2239f250b40b0488c35feae59520f2d3/pkg/repository/backup_repo_op.go#L32-L37).
 
 If there is a key match with BackupRepository, the key's value is applied to the BackupRepository's maintenance jobs.
 By this way, it's possible to let user configure before the BackupRepository is created.

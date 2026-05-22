@@ -8,12 +8,12 @@ As of Today, Velero will skip over the restoration of resources that already exi
 - Fetches the `service` from the cluster 
 - If the `service` exists then:
     - Checks whether the `service` instance in the cluster is equal to the `service`  instance present in backup
-        - If not equal then skips the restore of the `service` and adds a restore warning (except for [ServiceAccount objects](https://github.com/vmware-tanzu/velero/blob/574baeb3c920f97b47985ec3957debdc70bcd5f8/pkg/restore/restore.go#L1246))
+        - If not equal then skips the restore of the `service` and adds a restore warning (except for [ServiceAccount objects](https://github.com/velero-io/velero/blob/574baeb3c920f97b47985ec3957debdc70bcd5f8/pkg/restore/restore.go#L1246))
         - If equal then skips the restore of the `service` and mentions that the restore of resource `service` is skipped in logs
 
 It is desired to add the functionality to specify whether or not to overwrite the instance of resource `service` in cluster with the one present in backup during the restore process.
 
-Related issue: https://github.com/vmware-tanzu/velero/issues/4066
+Related issue: https://github.com/velero-io/velero/issues/4066
 
 ## Goals
 - Add support for `ExistingResourcePolicy` to restore API for Kubernetes resources.
@@ -31,7 +31,7 @@ Related issue: https://github.com/vmware-tanzu/velero/issues/4066
 ### A. Production Cluster - Backup Cluster:
 Let's say you have a Backup Cluster which is identical to the Production Cluster. After some operations/usage/time the Production Cluster had changed itself, there might be new deployments, some secrets might have been updated. Now, this means that the Backup cluster will no longer be identical to the Production Cluster. In order to keep the Backup Cluster up to date/identical to the Production Cluster with respect to Kubernetes resources except PV data we would like to use Velero for scheduling new backups which would in turn help us update the Backup Cluster via Velero restore.
 
-Reference: https://github.com/vmware-tanzu/velero/issues/4066#issuecomment-954320686
+Reference: https://github.com/velero-io/velero/issues/4066#issuecomment-954320686
 
 ### B. Help identify resource delta:
 Here delta resources mean the resources restored by a previous backup, but they are no longer in the latest backup. Let's follow a sequence of steps to understand this scenario:
@@ -43,7 +43,7 @@ Here delta resources mean the resources restored by a previous backup, but they 
 - So the Delta here is (|Cluster B - Backup2|), Delete P1 and Update P2.
 - During Restore time we would want the Restore to help us identify this resource delta.
 
-Reference: https://github.com/vmware-tanzu/velero/pull/4613#issuecomment-1027260446
+Reference: https://github.com/velero-io/velero/pull/4613#issuecomment-1027260446
 
 ## High-Level Design
 ### Approach 1: Add a new spec field `existingResourcePolicy` to the Restore API
@@ -238,7 +238,7 @@ IncludedResources []string
 }
 ```
 
-The restore workflow changes will be done [here](https://github.com/vmware-tanzu/velero/blob/b40bbda2d62af2f35d1406b9af4d387d4b396839/pkg/restore/restore.go#L1245)
+The restore workflow changes will be done [here](https://github.com/velero-io/velero/blob/b40bbda2d62af2f35d1406b9af4d387d4b396839/pkg/restore/restore.go#L1245)
 
 ### CLI changes for Approach 1
 We would introduce a new CLI flag called `existing-resource-policy` of string type. This flag would be used to accept the 

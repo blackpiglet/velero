@@ -19,7 +19,7 @@ package types
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/vmware-tanzu/velero/pkg/util/kube"
+	"github.com/velero-io/velero/pkg/util/kube"
 )
 
 type LoadConcurrency struct {

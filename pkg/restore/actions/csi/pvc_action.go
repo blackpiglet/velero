@@ -33,17 +33,17 @@ import (
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
-	velerov2alpha1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v2alpha1"
-	"github.com/vmware-tanzu/velero/pkg/client"
-	kuberesource "github.com/vmware-tanzu/velero/pkg/kuberesource"
-	"github.com/vmware-tanzu/velero/pkg/label"
-	plugincommon "github.com/vmware-tanzu/velero/pkg/plugin/framework/common"
-	"github.com/vmware-tanzu/velero/pkg/plugin/velero"
-	riav2 "github.com/vmware-tanzu/velero/pkg/plugin/velero/restoreitemaction/v2"
-	uploaderUtil "github.com/vmware-tanzu/velero/pkg/uploader/util"
-	"github.com/vmware-tanzu/velero/pkg/util"
-	"github.com/vmware-tanzu/velero/pkg/util/boolptr"
+	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
+	velerov2alpha1 "github.com/velero-io/velero/pkg/apis/velero/v2alpha1"
+	"github.com/velero-io/velero/pkg/client"
+	kuberesource "github.com/velero-io/velero/pkg/kuberesource"
+	"github.com/velero-io/velero/pkg/label"
+	plugincommon "github.com/velero-io/velero/pkg/plugin/framework/common"
+	"github.com/velero-io/velero/pkg/plugin/velero"
+	riav2 "github.com/velero-io/velero/pkg/plugin/velero/restoreitemaction/v2"
+	uploaderUtil "github.com/velero-io/velero/pkg/uploader/util"
+	"github.com/velero-io/velero/pkg/util"
+	"github.com/velero-io/velero/pkg/util/boolptr"
 )
 
 const (

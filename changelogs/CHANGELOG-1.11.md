@@ -2,7 +2,7 @@
 ### 2023-04-07
 
 ### Download
-https://github.com/vmware-tanzu/velero/releases/tag/v1.11.0
+https://github.com/velero-io/velero/releases/tag/v1.11.0
 
 ### Container Image
 `velero/velero:v1.11.0`
@@ -26,10 +26,10 @@ This feature implemented the RestoreItemAction v2. RIA v2 has three new methods:
 The Progress() and Cancel() methods are needed to facilitate long-running RestoreItemAction plugin actions that may not be complete when the Execute() method returns. This will allow long-running RestoreItemAction plugin actions to continue in the background while the Velero moves to the following plugin or the next item. The AreAdditionalItemsReady() method is needed to allow plugins to tell Velero to wait until the returned additional items have been restored and are ready for use in the cluster before restoring the current item.
 
 #### Plugin Progress Monitoring
-This is intended as a replacement for the previously-approved Upload Progress Monitoring design ([Upload Progress Monitoring](https://github.com/vmware-tanzu/velero/blob/main/design/upload-progress.md)) to expand the supported use cases beyond snapshot upload to include what was previously called Async Backup/Restore Item Actions.
+This is intended as a replacement for the previously-approved Upload Progress Monitoring design ([Upload Progress Monitoring](https://github.com/velero-io/velero/blob/main/design/upload-progress.md)) to expand the supported use cases beyond snapshot upload to include what was previously called Async Backup/Restore Item Actions.
 
 #### Flexible resource policy that can filter volumes to skip in the backup
-This feature provides a flexible policy to filter volumes in the backup without requiring patching any labels or annotations to the pods or volumes. This policy is configured as k8s ConfigMap and maintained by the users themselves, and it can be extended to more scenarios in the future. By now, the policy rules out volumes from backup depending on the CSI driver, NFS setting, volume size, and StorageClass setting. Please refer to [policy API design](https://github.com/vmware-tanzu/velero/blob/main/design/Implemented/handle-backup-of-volumes-by-resources-filters.md#api-design) for the policy's ConifgMap format. It is not guaranteed to work on unofficial third-party plugins as it may not follow the existing backup workflow code logic of Velero.
+This feature provides a flexible policy to filter volumes in the backup without requiring patching any labels or annotations to the pods or volumes. This policy is configured as k8s ConfigMap and maintained by the users themselves, and it can be extended to more scenarios in the future. By now, the policy rules out volumes from backup depending on the CSI driver, NFS setting, volume size, and StorageClass setting. Please refer to [policy API design](https://github.com/velero-io/velero/blob/main/design/Implemented/handle-backup-of-volumes-by-resources-filters.md#api-design) for the policy's ConifgMap format. It is not guaranteed to work on unofficial third-party plugins as it may not follow the existing backup workflow code logic of Velero.
 
 #### Resource Filters that can distinguish cluster scope and namespace scope resources
 This feature adds four new resource filters for backup. The new filters are separated into cluster scope and namespace scope. Before this feature, Velero could not filter cluster scope resources precisely. This feature provides the ability and refactors existing resource filter parameters.

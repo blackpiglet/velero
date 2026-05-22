@@ -1,7 +1,7 @@
 # Adding Support For VolumeAttributes in Resource Policy
  
 ## Abstract
-Currently [Velero Resource policies](https://velero.io/docs/main/resource-filtering/#creating-resource-policies) are only supporting "Driver" to be filtered for [CSI volume conditions](https://github.com/vmware-tanzu/velero/blob/8e23752a6ea83f101bd94a69dcf17f519a805388/internal/resourcepolicies/volume_resources_validator.go#L28)
+Currently [Velero Resource policies](https://velero.io/docs/main/resource-filtering/#creating-resource-policies) are only supporting "Driver" to be filtered for [CSI volume conditions](https://github.com/velero-io/velero/blob/8e23752a6ea83f101bd94a69dcf17f519a805388/internal/resourcepolicies/volume_resources_validator.go#L28)
 
 If user want to skip certain CSI volumes based on other volume attributes like protocol or SKU, etc, they can't do it with the current Velero resource policies. It would be convenient if Velero resource policies could be extended to filter on volume attributes along with existing driver filter in the resource policies `conditions` to handle the backup of volumes just by `some specific volumes attributes conditions`.
  
@@ -37,7 +37,7 @@ parameters:
 ```
 
 ## High-Level Design
-Modifying the existing Resource Policies code for [csiVolumeSource](https://github.com/vmware-tanzu/velero/blob/8e23752a6ea83f101bd94a69dcf17f519a805388/internal/resourcepolicies/volume_resources_validator.go#L28C6-L28C22) to add the new `VolumeAttributes` filter for CSI volumes and adding validations in existing [csiCondition](https://github.com/vmware-tanzu/velero/blob/8e23752a6ea83f101bd94a69dcf17f519a805388/internal/resourcepolicies/volume_resources.go#L150) to match with volume attributes in the conditions from Resource Policy config map and original persistent volume.
+Modifying the existing Resource Policies code for [csiVolumeSource](https://github.com/velero-io/velero/blob/8e23752a6ea83f101bd94a69dcf17f519a805388/internal/resourcepolicies/volume_resources_validator.go#L28C6-L28C22) to add the new `VolumeAttributes` filter for CSI volumes and adding validations in existing [csiCondition](https://github.com/velero-io/velero/blob/8e23752a6ea83f101bd94a69dcf17f519a805388/internal/resourcepolicies/volume_resources.go#L150) to match with volume attributes in the conditions from Resource Policy config map and original persistent volume.
 
 ## Detailed Design
 The volume resources policies should contain a list of policies which is the combination of conditions and related `action`, when target volumes meet the conditions, the related `action` will take effection.

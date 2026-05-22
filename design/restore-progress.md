@@ -217,4 +217,4 @@ TBD
 
 ## Open Issues
 
-https://github.com/vmware-tanzu/velero/issues/21
+https://github.com/velero-io/velero/issues/21

@@ -26,11 +26,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
-	"github.com/vmware-tanzu/velero/pkg/client"
-	"github.com/vmware-tanzu/velero/pkg/cmd"
-	"github.com/vmware-tanzu/velero/pkg/cmd/util/cacert"
-	"github.com/vmware-tanzu/velero/pkg/cmd/util/downloadrequest"
+	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
+	"github.com/velero-io/velero/pkg/client"
+	"github.com/velero-io/velero/pkg/cmd"
+	"github.com/velero-io/velero/pkg/cmd/util/cacert"
+	"github.com/velero-io/velero/pkg/cmd/util/downloadrequest"
 )
 
 func NewLogsCommand(f client.Factory) *cobra.Command {

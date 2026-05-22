@@ -33,16 +33,16 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	kbclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
-	"github.com/vmware-tanzu/velero/pkg/builder"
-	"github.com/vmware-tanzu/velero/pkg/features"
-	"github.com/vmware-tanzu/velero/pkg/itemoperation"
-	"github.com/vmware-tanzu/velero/pkg/kuberesource"
-	"github.com/vmware-tanzu/velero/pkg/metrics"
-	"github.com/vmware-tanzu/velero/pkg/plugin/clientmgmt"
-	"github.com/vmware-tanzu/velero/pkg/plugin/framework"
-	"github.com/vmware-tanzu/velero/pkg/plugin/velero"
-	velerotest "github.com/vmware-tanzu/velero/pkg/test"
+	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
+	"github.com/velero-io/velero/pkg/builder"
+	"github.com/velero-io/velero/pkg/features"
+	"github.com/velero-io/velero/pkg/itemoperation"
+	"github.com/velero-io/velero/pkg/kuberesource"
+	"github.com/velero-io/velero/pkg/metrics"
+	"github.com/velero-io/velero/pkg/plugin/clientmgmt"
+	"github.com/velero-io/velero/pkg/plugin/framework"
+	"github.com/velero-io/velero/pkg/plugin/velero"
+	velerotest "github.com/velero-io/velero/pkg/test"
 )
 
 func mockBackupFinalizerReconciler(fakeClient kbclient.Client, fakeGlobalClient kbclient.Client, fakeClock *testclocks.FakeClock) (*backupFinalizerReconciler, *fakeBackupper) {

@@ -7,7 +7,7 @@
 package v1
 
 import (
-	generated "github.com/vmware-tanzu/velero/pkg/plugin/generated"
+	generated "github.com/velero-io/velero/pkg/plugin/generated"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"

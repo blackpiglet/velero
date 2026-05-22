@@ -24,10 +24,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
-	"github.com/vmware-tanzu/velero/pkg/kuberesource"
-	"github.com/vmware-tanzu/velero/pkg/plugin/velero"
-	"github.com/vmware-tanzu/velero/pkg/util"
+	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
+	"github.com/velero-io/velero/pkg/kuberesource"
+	"github.com/velero-io/velero/pkg/plugin/velero"
+	"github.com/velero-io/velero/pkg/util"
 )
 
 const (

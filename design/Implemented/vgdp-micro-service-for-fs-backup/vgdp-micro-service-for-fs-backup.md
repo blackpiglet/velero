@@ -654,9 +654,9 @@ CLI is not changed.
 [2]: ../volume-snapshot-data-movement/volume-snapshot-data-movement.md
 [3]: ../vgdp-micro-service/vgdp-micro-service.md
 [4]: ../node-agent-concurrency.md
-[5]: https://github.com/vmware-tanzu/velero/issues/8955
-[6]: https://github.com/vmware-tanzu/velero/issues/8956
-[7]: https://github.com/vmware-tanzu/velero/issues/8289
+[5]: https://github.com/velero-io/velero/issues/8955
+[6]: https://github.com/velero-io/velero/issues/8956
+[7]: https://github.com/velero-io/velero/issues/8289
 [8]: https://kubernetes.io/docs/tasks/configure-pod-container/create-hostprocess-pod/
-[9]: https://github.com/vmware-tanzu/velero/issues/7725
-[10]: https://github.com/vmware-tanzu/velero/issues/8423
+[9]: https://github.com/velero-io/velero/issues/7725
+[10]: https://github.com/velero-io/velero/issues/8423

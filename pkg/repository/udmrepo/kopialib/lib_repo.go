@@ -38,9 +38,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/vmware-tanzu/velero/pkg/kopia"
-	"github.com/vmware-tanzu/velero/pkg/repository/udmrepo"
-	"github.com/vmware-tanzu/velero/pkg/repository/udmrepo/kopialib/backend"
+	"github.com/velero-io/velero/pkg/kopia"
+	"github.com/velero-io/velero/pkg/repository/udmrepo"
+	"github.com/velero-io/velero/pkg/repository/udmrepo/kopialib/backend"
 )
 
 type kopiaRepoService struct {
