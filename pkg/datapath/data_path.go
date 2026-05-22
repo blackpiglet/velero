@@ -183,7 +183,7 @@ func (dp *generalDataPath) StartBackup(source AccessPoint, uploaderConfig map[st
 		}()
 
 		snapshotID, emptySnapshot, totalBytes, incrementalBytes, err := dp.uploaderProv.RunBackup(dp.ctx, source.ByPath, backupParam.RealSource, backupParam.Tags, backupParam.ForceFull,
-			backupParam.ParentSnapshot, source.VolMode, uploaderConfig, dp)
+			backupParam.ParentSnapshot, provider.CBTParam{}, source.VolMode, uploaderConfig, dp)
 
 		if err == provider.ErrorCanceled {
 			dp.callbacks.OnCancelled(context.Background(), dp.namespace, dp.jobName)

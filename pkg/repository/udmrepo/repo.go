@@ -77,15 +77,19 @@ type AdvancedFeatureInfo struct {
 }
 
 type ObjectMetadata struct {
-	ID   ID
-	Type int // OBJECT_DATA_TYPE_*
-	Size int64
+	ID          ID
+	Name        string
+	Type        int // OBJECT_DATA_TYPE_*
+	Size        int64
+	ModTime     time.Time
+	Permissions int
+	UserID      uint32
+	GroupID     uint32
 }
 
 type Metadata struct {
-	SubObjects   []ObjectMetadata // For dir metadata only, the sub objects in this dir.
-	ExtraDataLen int              // Extra data associated to this metadata.
-	ExtraData    []byte
+	SubObjects []ObjectMetadata
+	Summary    string
 }
 
 type Snapshot struct {
