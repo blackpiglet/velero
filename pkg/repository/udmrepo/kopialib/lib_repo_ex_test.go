@@ -133,7 +133,7 @@ func TestGetFlattenedEntries(t *testing.T) {
 	kr := &kopiaRepository{logger: velerotest.NewLogger()}
 	rawID := object.ID{}
 	_, err := kr.getFlattenedEntries(context.Background(), rawID)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "object is not an indirect object")
 }
 
@@ -177,6 +177,14 @@ func TestNewObjectWriterEx(t *testing.T) {
 			},
 			rawWriter:   repomocks.NewMockRepositoryWriter(t),
 			expectedErr: "parent object is only supported for block mode",
+		},
+		{
+			name: "block mode success with async writes",
+			opt: udmrepo.ObjectWriteOptions{
+				AccessMode:  udmrepo.ObjectDataAccessModeBlock,
+				AsyncWrites: 4,
+			},
+			rawWriter: repomocks.NewMockRepositoryWriter(t),
 		},
 	}
 

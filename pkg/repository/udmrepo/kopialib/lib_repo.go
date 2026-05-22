@@ -22,7 +22,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -84,8 +83,6 @@ type kopiaObjectWriterEx struct {
 	ctx           context.Context
 	rawRepoWriter repo.RepositoryWriter
 	parentEntries []object.IndirectObjectEntry
-	entries       []object.IndirectObjectEntry
-	entryLock     sync.Mutex
 	blockSize     int64
 	description   string
 	compressor    compression.Name
@@ -855,12 +852,12 @@ func (kow *kopiaObjectWriter) Close() error {
 
 // TODO add implementation in following PRs
 func (kow *kopiaObjectWriterEx) Write(p []byte) (int, error) {
-	return 0, nil
+	return 0, errors.New("not implemented")
 }
 
 // TODO add implementation in following PRs
 func (kow *kopiaObjectWriterEx) WriteAt(p []byte, offset int64) (int, error) {
-	return 0, nil
+	return 0, errors.New("not implemented")
 }
 
 func (kow *kopiaObjectWriterEx) Checkpoint() (udmrepo.ID, error) {
@@ -869,12 +866,12 @@ func (kow *kopiaObjectWriterEx) Checkpoint() (udmrepo.ID, error) {
 
 // TODO add implementation in following PRs
 func (kow *kopiaObjectWriterEx) Result() (udmrepo.ID, error) {
-	return udmrepo.ID(""), nil
+	return udmrepo.ID(""), errors.New("not implemented")
 }
 
 // TODO add implementation in following PRs
 func (kow *kopiaObjectWriterEx) Close() error {
-	return nil
+	return errors.New("not implemented")
 }
 
 // getCompressorForObject returns the compressor for an object, at present, we don't support compression
