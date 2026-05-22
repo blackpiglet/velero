@@ -177,8 +177,10 @@ func getParentBackupInfo(ctx context.Context, rep udmrepo.BackupRepo, forceFull 
 			log.Warnf("No VolumeID tag from parent snapshot %s, fallback to full backup", parentSnapshot)
 		} else if previous.Tags[uploader.CBTVolumeIDTag] != volumeID {
 			log.Warnf("VolumeID %s from parent snapshot %s is not expected as %s, fallback to full backup", previous.Tags[uploader.CBTVolumeIDTag], parentSnapshot, volumeID)
+		} else if obj, err := loadObjectFromSnapshot(ctx, rep, previous); err != nil {
+			log.WithError(err).Warnf("Failed to load object from parent snapshot %s, fallback to full backup", parentSnapshot)
 		} else {
-			parentInfo.parentObject = previous.RootObject.ID
+			parentInfo.parentObject = obj
 			parentInfo.changeID = previous.Tags[uploader.CBTChangeIDTag]
 			parentInfo.volumeID = previous.Tags[uploader.CBTVolumeIDTag]
 
