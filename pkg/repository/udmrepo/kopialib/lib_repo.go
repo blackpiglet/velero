@@ -33,6 +33,7 @@ import (
 	"github.com/kopia/kopia/repo/manifest"
 	"github.com/kopia/kopia/repo/object"
 	"github.com/kopia/kopia/snapshot"
+	"github.com/kopia/kopia/snapshot/snapshotfs"
 	"github.com/kopia/kopia/snapshot/snapshotmaintenance"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -412,14 +413,74 @@ func (kr *kopiaRepository) NewObjectWriter(ctx context.Context, opt udmrepo.Obje
 	}, nil
 }
 
-// TODO add implementation in following PRs
+const kopiaDirStreamType = "kopia:directory"
+
 func (kr *kopiaRepository) WriteMetadata(ctx context.Context, meta *udmrepo.Metadata, opt udmrepo.ObjectWriteOptions) (udmrepo.ID, error) {
-	return "", errors.New("not supported")
+	if kr.rawWriter == nil {
+		return "", errors.New("repo writer is closed or not open")
+	}
+
+	dirEntries := []*snapshot.DirEntry{}
+	if meta.SubObjects != nil {
+		for _, sub := range meta.SubObjects {
+			rawID, err := object.ParseID(string(sub.ID))
+			if err != nil {
+				return "", errors.Wrapf(err, "error parsing object ID from %v", sub)
+			}
+
+			dirEntries = append(dirEntries, &snapshot.DirEntry{
+				Name:        sub.Name,
+				ObjectID:    rawID,
+				Type:        getKopiaObjectType(sub.Type),
+				FileSize:    sub.Size,
+				Permissions: snapshot.Permissions(sub.Permissions),
+				ModTime:     fs.UTCTimestampFromTime(sub.ModTime),
+				UserID:      sub.UserID,
+				GroupID:     sub.GroupID,
+			})
+		}
+	}
+
+	dirManifest := snapshot.DirManifest{
+		StreamType: kopiaDirStreamType,
+		Entries:    dirEntries,
+	}
+
+	oid, err := snapshotfs.WriteDirManifest(ctx, kr.rawWriter, opt.Description, &dirManifest, getMetadataCompressor())
+	if err != nil {
+		return "", errors.Wrapf(err, "error writing dir manifest: %v", opt.Description)
+	}
+
+	return udmrepo.ID(oid.String()), nil
 }
 
-// TODO add implementation in following PRs
 func (kr *kopiaRepository) ReadMetadata(ctx context.Context, id udmrepo.ID) (*udmrepo.Metadata, error) {
-	return nil, errors.New("not supported")
+	reader, err := kr.OpenObject(ctx, id)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error to open metadata object %v", id)
+	}
+	defer reader.Close()
+
+	dirManifest := snapshot.DirManifest{}
+	if err := json.NewDecoder(reader).Decode(&dirManifest); err != nil {
+		return nil, errors.Wrap(err, "unable to parse directory object")
+	}
+
+	meta := udmrepo.Metadata{}
+	for _, sub := range dirManifest.Entries {
+		meta.SubObjects = append(meta.SubObjects, udmrepo.ObjectMetadata{
+			ID:          udmrepo.ID(sub.ObjectID.String()),
+			Name:        sub.Name,
+			Type:        getObjectDataType(sub.Type),
+			Size:        sub.FileSize,
+			ModTime:     sub.ModTime.ToTime(),
+			Permissions: int(sub.Permissions),
+			UserID:      sub.UserID,
+			GroupID:     sub.GroupID,
+		})
+	}
+
+	return &meta, nil
 }
 
 func (kr *kopiaRepository) PutManifest(ctx context.Context, manifest udmrepo.RepoManifest) (udmrepo.ID, error) {
@@ -774,4 +835,26 @@ func openKopiaRepo(ctx context.Context, configFile string, password string, opti
 	}
 
 	return r, nil
+}
+
+func getKopiaObjectType(tp int) snapshot.EntryType {
+	switch tp {
+	case udmrepo.ObjectDataTypeMetadata:
+		return snapshot.EntryTypeDirectory
+	case udmrepo.ObjectDataTypeData:
+		return snapshot.EntryTypeFile
+	default:
+		return snapshot.EntryTypeUnknown
+	}
+}
+
+func getObjectDataType(tp snapshot.EntryType) int {
+	switch tp {
+	case snapshot.EntryTypeDirectory:
+		return udmrepo.ObjectDataTypeMetadata
+	case snapshot.EntryTypeFile:
+		return udmrepo.ObjectDataTypeData
+	default:
+		return udmrepo.ObjectDataTypeUnknown
+	}
 }

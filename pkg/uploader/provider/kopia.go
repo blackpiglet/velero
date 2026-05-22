@@ -118,6 +118,7 @@ func (kp *kopiaProvider) RunBackup(
 	tags map[string]string,
 	forceFull bool,
 	parentSnapshot string,
+	_ CBTParam,
 	volMode uploader.PersistentVolumeMode,
 	uploaderCfg map[string]string,
 	updater uploader.ProgressUpdater) (string, bool, int64, int64, error) {

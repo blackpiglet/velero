@@ -78,6 +78,7 @@ type AdvancedFeatureInfo struct {
 
 type ObjectMetadata struct {
 	ID          ID
+	Name        string
 	Type        int // OBJECT_DATA_TYPE_*
 	Size        int64
 	ModTime     time.Time

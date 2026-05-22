@@ -17,6 +17,7 @@ limitations under the License.
 package kopialib
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"math"
@@ -1282,6 +1283,173 @@ func TestIsReady(t *testing.T) {
 			}
 
 			require.Equal(t, tc.expected, ready)
+		})
+	}
+}
+
+type fakeObjectReader struct {
+	*bytes.Reader
+}
+
+func (f *fakeObjectReader) Close() error {
+	return nil
+}
+
+func (f *fakeObjectReader) Length() int64 {
+	return int64(f.Reader.Len())
+}
+
+func TestWriteMetadata(t *testing.T) {
+	testCases := []struct {
+		name            string
+		rawWriter       *repomocks.MockRepositoryWriter
+		rawObjWriter    *repomocks.Writer
+		meta            *udmrepo.Metadata
+		rawWriterRetErr error
+		expectedErr     string
+	}{
+		{
+			name:        "raw writer is nil",
+			expectedErr: "repo writer is closed or not open",
+		},
+		{
+			name:      "invalid object id",
+			rawWriter: repomocks.NewMockRepositoryWriter(t),
+			meta: &udmrepo.Metadata{
+				SubObjects: []udmrepo.ObjectMetadata{
+					{
+						ID: "fake-id",
+					},
+				},
+			},
+			expectedErr: "error parsing object ID from {fake-id  0 0 0001-01-01 00:00:00 +0000 UTC 0 0 0}: malformed content ID: \"fake-id\": invalid content prefix",
+		},
+		{
+			name:         "write dir manifest fail",
+			rawWriter:    repomocks.NewMockRepositoryWriter(t),
+			rawObjWriter: repomocks.NewWriter(t),
+			meta: &udmrepo.Metadata{
+				SubObjects: []udmrepo.ObjectMetadata{
+					{
+						ID: "I123456",
+					},
+				},
+			},
+			rawWriterRetErr: errors.New("fake-write-error"),
+			expectedErr:     "error writing dir manifest: : unable to encode directory JSON: fake-write-error",
+		},
+		{
+			name:         "succeed",
+			rawWriter:    repomocks.NewMockRepositoryWriter(t),
+			rawObjWriter: repomocks.NewWriter(t),
+			meta: &udmrepo.Metadata{
+				SubObjects: []udmrepo.ObjectMetadata{
+					{
+						ID: "I123456",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			kr := &kopiaRepository{}
+
+			if tc.rawWriter != nil {
+				if tc.rawObjWriter != nil {
+					tc.rawWriter.On("NewObjectWriter", mock.Anything, mock.Anything).Return(tc.rawObjWriter)
+					if tc.rawWriterRetErr != nil {
+						tc.rawObjWriter.On("Write", mock.Anything).Return(0, tc.rawWriterRetErr)
+						tc.rawObjWriter.On("Close").Return(nil)
+					} else {
+						tc.rawObjWriter.On("Write", mock.Anything).Return(10, nil)
+						tc.rawObjWriter.On("Result").Return(object.ID{}, nil)
+						tc.rawObjWriter.On("Close").Return(nil)
+					}
+				}
+				kr.rawWriter = tc.rawWriter
+			}
+
+			_, err := kr.WriteMetadata(t.Context(), tc.meta, udmrepo.ObjectWriteOptions{})
+
+			if tc.expectedErr == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tc.expectedErr)
+			}
+		})
+	}
+}
+
+func TestReadMetadata(t *testing.T) {
+	testCases := []struct {
+		name        string
+		rawRepo     *repomocks.MockRepository
+		objectID    udmrepo.ID
+		openErr     error
+		readData    []byte
+		expectedErr string
+		expected    *udmrepo.Metadata
+	}{
+		{
+			name:        "open object fail",
+			rawRepo:     repomocks.NewMockRepository(t),
+			objectID:    "I123456",
+			openErr:     errors.New("fake-open-error"),
+			expectedErr: "error to open metadata object I123456: error to open object: fake-open-error",
+		},
+		{
+			name:        "invalid json",
+			rawRepo:     repomocks.NewMockRepository(t),
+			objectID:    "I123456",
+			readData:    []byte("invalid json"),
+			expectedErr: "unable to parse directory object: invalid character 'i' looking for beginning of value",
+		},
+		{
+			name:     "succeed",
+			rawRepo:  repomocks.NewMockRepository(t),
+			objectID: "I123456",
+			readData: []byte(`{"stream":"kopia:directory","entries":[{"name":"file1","type":"f","mode":"0644","size":100,"uid":1000,"gid":1000,"mtime":"2023-01-01T00:00:00Z","obj":"I123456"}]}`),
+			expected: &udmrepo.Metadata{
+				SubObjects: []udmrepo.ObjectMetadata{
+					{
+						ID:          "I123456",
+						Name:        "file1",
+						Type:        udmrepo.ObjectDataTypeData,
+						Size:        100,
+						ModTime:     time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC).Local(),
+						Permissions: 420,
+						UserID:      1000,
+						GroupID:     1000,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			kr := &kopiaRepository{}
+
+			if tc.rawRepo != nil {
+				if tc.openErr != nil {
+					tc.rawRepo.On("OpenObject", mock.Anything, mock.Anything).Return(nil, tc.openErr)
+				} else {
+					reader := &fakeObjectReader{Reader: bytes.NewReader(tc.readData)}
+					tc.rawRepo.On("OpenObject", mock.Anything, mock.Anything).Return(reader, nil)
+				}
+				kr.rawRepo = tc.rawRepo
+			}
+
+			meta, err := kr.ReadMetadata(t.Context(), tc.objectID)
+
+			if tc.expectedErr == "" {
+				require.NoError(t, err)
+				assert.Equal(t, tc.expected, meta)
+			} else {
+				assert.EqualError(t, err, tc.expectedErr)
+			}
 		})
 	}
 }
