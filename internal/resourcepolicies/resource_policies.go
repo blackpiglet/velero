@@ -262,6 +262,7 @@ func (p *Policies) Validate() error {
 	}
 
 	if err := p.validateNamespacedFilterPolicies(); err != nil {
+	if err := p.validateClusterScopedFilterPolicy(); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -409,6 +410,41 @@ func (p *Policies) validateNamespacedFilterPolicies() error {
 			return fmt.Errorf(
 				"namespacedFilterPolicies: duplicate namespace pattern '%s' found in policies %v",
 				pattern, policyIndices)
+func (p *Policies) validateClusterScopedFilterPolicy() error {
+	if p.clusterScopedFilterPolicy == nil {
+		return nil
+	}
+
+	if len(p.clusterScopedFilterPolicy.ResourceFilters) == 0 {
+		return fmt.Errorf("clusterScopedFilterPolicy: at least one resourceFilter must be specified")
+	}
+
+	seenKinds := make(map[string]int)
+	for j, rf := range p.clusterScopedFilterPolicy.ResourceFilters {
+		if rf.IsCatchAll() {
+			return fmt.Errorf("clusterScopedFilterPolicy.resourceFilters[%d]: kinds must be specified (catch-all is not supported)", j)
+		}
+
+		for _, kind := range rf.Kinds {
+			if prevJ, ok := seenKinds[kind]; ok {
+				return fmt.Errorf("clusterScopedFilterPolicy: kind %q appears in both resourceFilters[%d] and resourceFilters[%d]", kind, prevJ, j)
+			}
+			seenKinds[kind] = j
+		}
+
+		if len(rf.LabelSelector) > 0 && len(rf.OrLabelSelectors) > 0 {
+			return fmt.Errorf("clusterScopedFilterPolicy.resourceFilters[%d]: labelSelector and orLabelSelectors cannot co-exist", j)
+		}
+
+		for k, pattern := range rf.Names {
+			if _, err := glob.Compile(pattern); err != nil {
+				return fmt.Errorf("clusterScopedFilterPolicy.resourceFilters[%d].names[%d]: invalid glob pattern %q: %v", j, k, pattern, err)
+			}
+		}
+		for k, pattern := range rf.ExcludedNames {
+			if _, err := glob.Compile(pattern); err != nil {
+				return fmt.Errorf("clusterScopedFilterPolicy.resourceFilters[%d].excludedNames[%d]: invalid glob pattern %q: %v", j, k, pattern, err)
+			}
 		}
 	}
 
