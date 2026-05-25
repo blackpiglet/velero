@@ -43,7 +43,7 @@ This script will deploy the following CSI components, CRDs, and necessary RBAC:
 
 The CSI volume snapshot capability is currently, as of Velero 1.4, a beta feature behind the `EnableCSI` feature flag and is not enabled by default.
 
-Following instructions from our [docs website](https://velero.io/docs/csi/), install Velero with the [velero-plugin-for-csi](https://github.com/velero-io/velero-plugin-for-csi) and using the Azure Blob Store as our BackupStorageLocation. Please refer to our [velero-plugin-for-microsoft-azure documentation](https://github.com/velero-io/velero-plugin-for-microsoft-azure) for instructions on setting up the BackupStorageLocation. Please note that the BackupStorageLocation should be set up before installing Velero.
+Following instructions from our [docs website](https://velero.io/docs/csi/), install Velero with the [velero-plugin-for-csi](https://github.com/vmware-tanzu/velero-plugin-for-csi) and using the Azure Blob Store as our BackupStorageLocation. Please refer to our [velero-plugin-for-microsoft-azure documentation](https://github.com/velero-io/velero-plugin-for-microsoft-azure) for instructions on setting up the BackupStorageLocation. Please note that the BackupStorageLocation should be set up before installing Velero.
 
 Install Velero by running the below command
 
@@ -199,4 +199,4 @@ More details about CSI volume snapshotting and its support in Velero may be foun
 - [Kubernetes 1.17 Feature: Kubernetes Volume Snapshot Moves to Beta](https://kubernetes.io/blog/2019/12/09/kubernetes-1-17-feature-cis-volume-snapshot-beta/) for more information on the CSI beta snapshot APIs.
 - Prerequisites to use this feature is available [on our website](https://velero.io/docs/csi).
 - [Kubernetes CSI docs](https://kubernetes-csi.github.io/docs/sidecar-containers.html): To understand components in a CSI environment
-- [Velero plugin for CSI snapshots](https://github.com/velero-io/velero-plugin-for-csi) for implementation details of the CSI plugin.
+- [Velero plugin for CSI snapshots](https://github.com/vmware-tanzu/velero-plugin-for-csi) for implementation details of the CSI plugin.
