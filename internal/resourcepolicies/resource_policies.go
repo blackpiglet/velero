@@ -23,12 +23,14 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	"github.com/gobwas/glob"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1api "k8s.io/api/core/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	"github.com/vmware-tanzu/velero/pkg/util/wildcard"
 )
 
 type VolumeActionType string
@@ -259,6 +261,10 @@ func (p *Policies) Validate() error {
 		}
 	}
 
+	if err := p.validateNamespacedFilterPolicies(); err != nil {
+		return errors.WithStack(err)
+	}
+
 	return nil
 }
 
@@ -334,4 +340,102 @@ func getResourcePoliciesFromConfig(cm *corev1api.ConfigMap) (*Policies, error) {
 	}
 
 	return policies, nil
+}
+
+func (p *Policies) validateNamespacedFilterPolicies() error {
+	// Rule 1-7: Basic validation rules
+	for i, nfp := range p.namespacedFilterPolicies {
+		if len(nfp.Namespaces) == 0 {
+			return fmt.Errorf("namespacedFilterPolicies[%d]: at least one namespace must be specified", i)
+		}
+		if len(nfp.ResourceFilters) == 0 {
+			return fmt.Errorf("namespacedFilterPolicies[%d]: at least one resourceFilter must be specified", i)
+		}
+
+		seenKinds := make(map[string]int)
+		hasCatchAll := false
+		for j, rf := range nfp.ResourceFilters {
+			if rf.IsCatchAll() {
+				if hasCatchAll {
+					return fmt.Errorf("namespacedFilterPolicies[%d]: only one catch-all resource filter is allowed", i)
+				}
+				hasCatchAll = true
+				if len(rf.Names) > 0 || len(rf.ExcludedNames) > 0 {
+					return fmt.Errorf("namespacedFilterPolicies[%d].resourceFilters[%d]: names or excludedNames cannot be specified for catch-all filters", i, j)
+				}
+			}
+
+			for _, kind := range rf.Kinds {
+				if kind == "*" {
+					continue // "*" is handled by IsCatchAll, no need to check duplicates against other kinds
+				}
+				if prevJ, ok := seenKinds[kind]; ok {
+					return fmt.Errorf("namespacedFilterPolicies[%d]: kind %q appears in both resourceFilters[%d] and resourceFilters[%d]", i, kind, prevJ, j)
+				}
+				seenKinds[kind] = j
+			}
+
+			if len(rf.LabelSelector) > 0 && len(rf.OrLabelSelectors) > 0 {
+				return fmt.Errorf("namespacedFilterPolicies[%d].resourceFilters[%d]: labelSelector and orLabelSelectors cannot co-exist", i, j)
+			}
+
+			// Validate glob patterns for names and excludedNames using gobwas/glob
+			for k, pattern := range rf.Names {
+				if _, err := glob.Compile(pattern); err != nil {
+					return fmt.Errorf("namespacedFilterPolicies[%d].resourceFilters[%d].names[%d]: invalid glob pattern %q: %v", i, j, k, pattern, err)
+				}
+			}
+			for k, pattern := range rf.ExcludedNames {
+				if _, err := glob.Compile(pattern); err != nil {
+					return fmt.Errorf("namespacedFilterPolicies[%d].resourceFilters[%d].excludedNames[%d]: invalid glob pattern %q: %v", i, j, k, pattern, err)
+				}
+			}
+		}
+	}
+
+	// Rule 8: Validate no duplicate namespace patterns across filter policies
+	if err := p.validateNoDuplicateNamespacePatterns(); err != nil {
+		return err
+	}
+
+	// Rule 9: Validate glob patterns for namespace names
+	if err := p.validateGlobPatterns(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Policies) validateNoDuplicateNamespacePatterns() error {
+	seenPatterns := make(map[string][]int) // pattern -> list of policy indices
+
+	for i, policy := range p.namespacedFilterPolicies {
+		for _, pattern := range policy.Namespaces {
+			seenPatterns[pattern] = append(seenPatterns[pattern], i)
+		}
+	}
+
+	// Report exact duplicates only
+	for pattern, policyIndices := range seenPatterns {
+		if len(policyIndices) > 1 {
+			return fmt.Errorf(
+				"namespacedFilterPolicies: duplicate namespace pattern '%s' found in policies %v",
+				pattern, policyIndices)
+		}
+	}
+	return nil
+}
+
+func (p *Policies) validateGlobPatterns() error {
+	for i, policy := range p.namespacedFilterPolicies {
+		for j, pattern := range policy.Namespaces {
+			// Use existing Velero wildcard validation for namespace patterns
+			if err := wildcard.ValidateNamespaceName(pattern); err != nil {
+				return fmt.Errorf(
+					"namespacedFilterPolicies[%d].namespaces[%d]: %w",
+					i, j, err)
+			}
+		}
+	}
+	return nil
 }
