@@ -29,13 +29,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kbclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/velero-io/velero/pkg/label"
+	"github.com/vmware-tanzu/velero/pkg/label"
 
-	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
-	velerov2alpha1 "github.com/velero-io/velero/pkg/apis/velero/v2alpha1"
-	"github.com/velero-io/velero/pkg/features"
-	"github.com/velero-io/velero/pkg/itemoperation"
-	"github.com/velero-io/velero/pkg/kuberesource"
+	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	velerov2alpha1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v2alpha1"
+	"github.com/vmware-tanzu/velero/pkg/features"
+	"github.com/vmware-tanzu/velero/pkg/itemoperation"
+	"github.com/vmware-tanzu/velero/pkg/kuberesource"
 )
 
 type Method string

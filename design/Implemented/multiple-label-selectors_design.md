@@ -14,7 +14,7 @@ backup for resources consisting of a label from a set of labels (label1 OR label
 create multiple backups per label rule. It would be really useful if Velero Backup API could respect a set of
 labels (OR Rule) for a single backup request.
 
-Related Issue: https://github.com/velero-io/velero/issues/1508
+Related Issue: https://github.com/vmware-tanzu/velero/issues/1508
 
 ## Goals
 - Enable support for backing up resources based on multiple labels (OR Logic) in a single backup config.
@@ -130,9 +130,9 @@ OrLabelSelectors []\*metav1.LabelSelector
 ```
 
 The logic to collect resources to be backed up for a particular backup will be updated in the `backup/item_collector.go`
-around [here](https://github.com/velero-io/velero/blob/574baeb3c920f97b47985ec3957debdc70bcd5f8/pkg/backup/item_collector.go#L294).
+around [here](https://github.com/vmware-tanzu/velero/blob/574baeb3c920f97b47985ec3957debdc70bcd5f8/pkg/backup/item_collector.go#L294).
 
-And for filtering the resources to be restored, the changes will go [here](https://github.com/velero-io/velero/blob/d1063bda7e513150fd9ae09c3c3c8b1115cb1965/pkg/restore/restore.go#L1769)
+And for filtering the resources to be restored, the changes will go [here](https://github.com/vmware-tanzu/velero/blob/d1063bda7e513150fd9ae09c3c3c8b1115cb1965/pkg/restore/restore.go#L1769)
 
 **Note:**
 - This feature will not be exposed via Velero CLI.

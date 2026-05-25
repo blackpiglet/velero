@@ -139,5 +139,5 @@ The data structures referenced by volume info is shared between both restore and
 we must make sure there will only be incremental changes to the metadata, such that no break change will be introduced to the client.
 
 ## Open Issues
-https://github.com/velero-io/velero/issues/7546
-https://github.com/velero-io/velero/issues/6478
+https://github.com/vmware-tanzu/velero/issues/7546
+https://github.com/vmware-tanzu/velero/issues/6478

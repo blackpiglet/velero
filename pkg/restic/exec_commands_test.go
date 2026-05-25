@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/velero-io/velero/pkg/test"
-	"github.com/velero-io/velero/pkg/util/filesystem"
+	"github.com/vmware-tanzu/velero/pkg/test"
+	"github.com/vmware-tanzu/velero/pkg/util/filesystem"
 )
 
 func Test_getSummaryLine(t *testing.T) {

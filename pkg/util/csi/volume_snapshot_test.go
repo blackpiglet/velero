@@ -36,13 +36,13 @@ import (
 	clientTesting "k8s.io/client-go/testing"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
-	"github.com/velero-io/velero/pkg/builder"
-	"github.com/velero-io/velero/pkg/test"
-	velerotest "github.com/velero-io/velero/pkg/test"
-	"github.com/velero-io/velero/pkg/util/boolptr"
-	"github.com/velero-io/velero/pkg/util/logging"
-	"github.com/velero-io/velero/pkg/util/stringptr"
+	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	"github.com/vmware-tanzu/velero/pkg/builder"
+	"github.com/vmware-tanzu/velero/pkg/test"
+	velerotest "github.com/vmware-tanzu/velero/pkg/test"
+	"github.com/vmware-tanzu/velero/pkg/util/boolptr"
+	"github.com/vmware-tanzu/velero/pkg/util/logging"
+	"github.com/vmware-tanzu/velero/pkg/util/stringptr"
 )
 
 type reactor struct {

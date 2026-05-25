@@ -1,7 +1,7 @@
 ## v1.15
 
 ### Download
-https://github.com/velero-io/velero/releases/tag/v1.15.0
+https://github.com/vmware-tanzu/velero/releases/tag/v1.15.0
 
 ### Container Image
 `velero/velero:v1.15.0`
@@ -19,13 +19,13 @@ Data transfer activities for CSI Snapshot Data Movement are moved from node-agen
 - This enables users to to control resource (i.e., cpu, memory) allocations in a granular manner, e.g., control them per backup/restore of a volume.
 - This enhances the resilience, crash of one data movement activity won't affect others.
 - This prevents unnecessary full backup because of host path changes after workload pods restart.
-- For more information, check the design https://github.com/velero-io/velero/blob/main/design/Implemented/vgdp-micro-service/vgdp-micro-service.md.
+- For more information, check the design https://github.com/vmware-tanzu/velero/blob/main/design/Implemented/vgdp-micro-service/vgdp-micro-service.md.
 
 #### Item Block concepts and ItemBlockAction (IBA) plugin
 Item Block concepts are introduced for resource backups to help to achieve multiple thread backups. Specifically, correlated resources are categorized in the same item block and item blocks could be processed concurrently in multiple threads.  
 ItemBlockAction plugin is introduced to help Velero to categorize resources into item blocks. At present, Velero provides built-in IBAs for pods and PVCs and Velero also supports customized IBAs for any resources.  
 In v1.15, Velero doesn't support multiple thread process of item blocks though item block concepts and IBA plugins are fully supported. The multiple thread support will be delivered in future releases.  
-For more information, check the design https://github.com/velero-io/velero/blob/main/design/backup-performance-improvements.md.  
+For more information, check the design https://github.com/vmware-tanzu/velero/blob/main/design/backup-performance-improvements.md.  
 
 #### Node selection for repository maintenance job
 Repository maintenance are resource consuming tasks, Velero now allows you to configure the nodes to run repository maintenance jobs, so that you can run repository maintenance jobs in idle nodes or avoid them to run in nodes hosting critical workloads.  
@@ -50,9 +50,9 @@ For more information, check the document https://velero.io/docs/v1.15/backup-rep
 
 #### Performance improvements
 In 1.15, several performance related issues/enhancements are included, which makes significant performance improvements in specific scenarios:  
-- There was a memory leak of Velero server after plugin calls, now it is fixed, see issue https://github.com/velero-io/velero/issues/7925
-- The `client-burst/client-qps` parameters are automatically inherited to plugins, so that you can use the same velero server parameters to accelerate the plugin executions when large number of API server calls happen, see issue https://github.com/velero-io/velero/issues/7806
-- Maintenance of Kopia repository takes huge memory in scenarios that huge number of files have been backed up, Velero 1.15 has included the Kopia upstream enhancement to fix the problem, see issue https://github.com/velero-io/velero/issues/7510
+- There was a memory leak of Velero server after plugin calls, now it is fixed, see issue https://github.com/vmware-tanzu/velero/issues/7925
+- The `client-burst/client-qps` parameters are automatically inherited to plugins, so that you can use the same velero server parameters to accelerate the plugin executions when large number of API server calls happen, see issue https://github.com/vmware-tanzu/velero/issues/7806
+- Maintenance of Kopia repository takes huge memory in scenarios that huge number of files have been backed up, Velero 1.15 has included the Kopia upstream enhancement to fix the problem, see issue https://github.com/vmware-tanzu/velero/issues/7510
 
 ### Runtime and dependencies
 Golang runtime: v1.22.8  
@@ -65,7 +65,7 @@ Therefore, a user option is added in the same backup PVC configuration configMap
 
 ### Breaking changes
 #### Deprecation of Restic
-Restic path for fs-backup is in deprecation process starting from 1.15. According to [Velero deprecation policy](https://github.com/velero-io/velero/blob/v1.15/GOVERNANCE.md#deprecation-policy), for 1.15, if Restic path is used the backup/restore of fs-backup still creates and succeeds, but you will see warnings in below scenarios:  
+Restic path for fs-backup is in deprecation process starting from 1.15. According to [Velero deprecation policy](https://github.com/vmware-tanzu/velero/blob/v1.15/GOVERNANCE.md#deprecation-policy), for 1.15, if Restic path is used the backup/restore of fs-backup still creates and succeeds, but you will see warnings in below scenarios:  
 - When `--uploader-type=restic` is used in Velero installation
 - When Restic path is used to create backup/restore of fs-backup
 
@@ -83,7 +83,7 @@ In 1.15, below Velero server parameters for repository maintenance jobs are move
 ```
 
 #### Changing PVC selected-node feature is deprecated
-In 1.15, the [Changing PVC selected-node feature](https://velero.io/docs/v1.15/restore-reference/#changing-pvc-selected-node) enters deprecation process and will be removed in future releases according to [Velero deprecation policy](https://github.com/velero-io/velero/blob/v1.15/GOVERNANCE.md#deprecation-policy). Usage of this feature for any purpose is not recommended.  
+In 1.15, the [Changing PVC selected-node feature](https://velero.io/docs/v1.15/restore-reference/#changing-pvc-selected-node) enters deprecation process and will be removed in future releases according to [Velero deprecation policy](https://github.com/vmware-tanzu/velero/blob/v1.15/GOVERNANCE.md#deprecation-policy). Usage of this feature for any purpose is not recommended.  
 
 ### All Changes
   * add no-relabeling option to backupPVC configmap (#8288, @sseago)

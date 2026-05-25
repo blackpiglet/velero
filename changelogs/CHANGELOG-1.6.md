@@ -2,7 +2,7 @@
 ### 2021-04-12
 
 ### Download
-https://github.com/velero-io/velero/releases/tag/v1.6.0
+https://github.com/vmware-tanzu/velero/releases/tag/v1.6.0
 
 ### Container Image
 `velero/velero:v1.6.0`

@@ -33,8 +33,8 @@ import (
 
 	clientTesting "k8s.io/client-go/testing"
 
-	"github.com/velero-io/velero/pkg/builder"
-	velerotest "github.com/velero-io/velero/pkg/test"
+	"github.com/vmware-tanzu/velero/pkg/builder"
+	velerotest "github.com/vmware-tanzu/velero/pkg/test"
 )
 
 type reactor struct {

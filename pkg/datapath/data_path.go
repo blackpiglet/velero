@@ -24,14 +24,14 @@ import (
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/velero-io/velero/internal/credentials"
-	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
-	"github.com/velero-io/velero/pkg/repository"
-	repokey "github.com/velero-io/velero/pkg/repository/keys"
-	repoProvider "github.com/velero-io/velero/pkg/repository/provider"
-	"github.com/velero-io/velero/pkg/uploader"
-	"github.com/velero-io/velero/pkg/uploader/provider"
-	"github.com/velero-io/velero/pkg/util/filesystem"
+	"github.com/vmware-tanzu/velero/internal/credentials"
+	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	"github.com/vmware-tanzu/velero/pkg/repository"
+	repokey "github.com/vmware-tanzu/velero/pkg/repository/keys"
+	repoProvider "github.com/vmware-tanzu/velero/pkg/repository/provider"
+	"github.com/vmware-tanzu/velero/pkg/uploader"
+	"github.com/vmware-tanzu/velero/pkg/uploader/provider"
+	"github.com/vmware-tanzu/velero/pkg/util/filesystem"
 )
 
 // InitParam define the input param for data path init
@@ -167,7 +167,7 @@ func (dp *generalDataPath) close(ctx context.Context) {
 
 func (dp *generalDataPath) StartBackup(source AccessPoint, uploaderConfig map[string]string, param any) error {
 	if !dp.initialized {
-		return errors.New("data path is not initialized")
+		return errors.New("file system data path is not initialized")
 	}
 
 	dp.wgDataPath.Add(1)
@@ -243,7 +243,7 @@ func (dp *generalDataPath) UpdateProgress(p *uploader.Progress) {
 
 func (dp *generalDataPath) Cancel() {
 	dp.cancel()
-	dp.log.WithField("user", dp.jobName).Info("Data path is canceled")
+	dp.log.WithField("user", dp.jobName).Info("FileSystemBR is canceled")
 }
 
 func (dp *generalDataPath) boostRepoConnect(ctx context.Context, repositoryType string, credentialGetter *credentials.CredentialGetter, cacheDir string) error {

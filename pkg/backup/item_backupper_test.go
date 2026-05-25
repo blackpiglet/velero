@@ -25,8 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/velero-io/velero/internal/resourcepolicies"
-	"github.com/velero-io/velero/pkg/kuberesource"
+	"github.com/vmware-tanzu/velero/internal/resourcepolicies"
+	"github.com/vmware-tanzu/velero/pkg/kuberesource"
 
 	"github.com/stretchr/testify/assert"
 	corev1api "k8s.io/api/core/v1"
@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/velero-io/velero/pkg/builder"
+	"github.com/vmware-tanzu/velero/pkg/builder"
 )
 
 func Test_resourceKey(t *testing.T) {

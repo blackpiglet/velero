@@ -22,7 +22,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/velero-io/velero/test"
+	"github.com/vmware-tanzu/velero/test"
 )
 
 func GenerateYamlReport() error {

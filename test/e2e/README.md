@@ -180,8 +180,8 @@ make test-e2e
 ```
 
 Please refer to `velero-plugin-for-microsoft-azure` documentation for instruction: 
-* [set up permissions for Velero](https://github.com/velero-io/velero-plugin-for-microsoft-azure#set-permissions-for-velero)
-* [set up azure storage account and blob container](https://github.com/velero-io/velero-plugin-for-microsoft-azure#setup-azure-storage-account-and-blob-container)
+* [set up permissions for Velero](https://github.com/vmware-tanzu/velero-plugin-for-microsoft-azure#set-permissions-for-velero)
+* [set up azure storage account and blob container](https://github.com/vmware-tanzu/velero-plugin-for-microsoft-azure#setup-azure-storage-account-and-blob-container)
 
 1. Run Multi-API group and version tests using MinIO as the backup storage location: 
    ``` bash

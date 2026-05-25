@@ -25,9 +25,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	velerotest "github.com/velero-io/velero/pkg/test"
-	"github.com/velero-io/velero/pkg/uploader/provider"
-	providerMock "github.com/velero-io/velero/pkg/uploader/provider/mocks"
+	velerotest "github.com/vmware-tanzu/velero/pkg/test"
+	"github.com/vmware-tanzu/velero/pkg/uploader/provider"
+	providerMock "github.com/vmware-tanzu/velero/pkg/uploader/provider/mocks"
 )
 
 func TestAsyncBackup(t *testing.T) {

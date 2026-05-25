@@ -76,7 +76,7 @@ metadata:
 
 We are targeting the implementation of this design for Velero 1.16 release.
 
-Current restoreStatus logic resides here: https://github.com/velero-io/velero/blob/32a8c62920ad96c70f1465252c0197b83d5fa6b6/pkg/restore/restore.go#L1652
+Current restoreStatus logic resides here: https://github.com/vmware-tanzu/velero/blob/32a8c62920ad96c70f1465252c0197b83d5fa6b6/pkg/restore/restore.go#L1652
 
 The modified logic would look somewhat like:
 

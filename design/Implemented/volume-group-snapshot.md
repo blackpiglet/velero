@@ -308,7 +308,7 @@ Backup workflow:
 	}
     ```
 
-- Changes to the Existing [PVC ItemBlockAction plugin](https://github.com/velero-io/velero/blob/512199723ff95d5016b32e91e3bf06b65f57d608/pkg/itemblock/actions/pvc_action.go#L64) (Update the GetRelatedItems function):
+- Changes to the Existing [PVC ItemBlockAction plugin](https://github.com/vmware-tanzu/velero/blob/512199723ff95d5016b32e91e3bf06b65f57d608/pkg/itemblock/actions/pvc_action.go#L64) (Update the GetRelatedItems function):
 ```go
 // Retrieve the VGS label key from the Backup spec.
 	vgsLabelKey := backup.Spec.VolumeGroupSnapshotLabelKey
@@ -338,7 +338,7 @@ Backup workflow:
 	}
 ```
 
-- Updates to [CSI PVC plugin](https://github.com/velero-io/velero/blob/512199723ff95d5016b32e91e3bf06b65f57d608/pkg/backup/actions/csi/pvc_action.go#L200) (Update the Execute method):
+- Updates to [CSI PVC plugin](https://github.com/vmware-tanzu/velero/blob/512199723ff95d5016b32e91e3bf06b65f57d608/pkg/backup/actions/csi/pvc_action.go#L200) (Update the Execute method):
 ```go
 func (p *pvcBackupItemAction) Execute(
     item runtime.Unstructured,

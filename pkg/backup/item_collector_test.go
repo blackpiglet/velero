@@ -28,11 +28,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
-	"github.com/velero-io/velero/pkg/builder"
-	"github.com/velero-io/velero/pkg/kuberesource"
-	"github.com/velero-io/velero/pkg/test"
-	"github.com/velero-io/velero/pkg/util/collections"
+	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	"github.com/vmware-tanzu/velero/pkg/builder"
+	"github.com/vmware-tanzu/velero/pkg/kuberesource"
+	"github.com/vmware-tanzu/velero/pkg/test"
+	"github.com/vmware-tanzu/velero/pkg/util/collections"
 )
 
 func TestSortCoreGroup(t *testing.T) {

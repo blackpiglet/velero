@@ -21,7 +21,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/velero-io/velero/pkg/plugin/framework/common"
+	"github.com/vmware-tanzu/velero/pkg/plugin/framework/common"
 )
 
 type Factory interface {

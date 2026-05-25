@@ -89,8 +89,8 @@ func TestGetName(t *testing.T) {
 		},
 		{
 			name:     "pull by digest",
-			image:    "quay.io/velero-io/velero@sha256:a75f9e8c3ced3943515f249597be389f8233e1258d289b11184796edceaa7dab",
-			expected: "velero-io-velero",
+			image:    "quay.io/vmware-tanzu/velero@sha256:a75f9e8c3ced3943515f249597be389f8233e1258d289b11184796edceaa7dab",
+			expected: "vmware-tanzu-velero",
 		},
 	}
 

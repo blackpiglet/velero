@@ -34,15 +34,15 @@ import (
 	"github.com/fatih/color"
 	kbclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	veleroapishared "github.com/velero-io/velero/pkg/apis/velero/shared"
-	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
-	"github.com/velero-io/velero/pkg/cmd/util/cacert"
-	"github.com/velero-io/velero/pkg/cmd/util/downloadrequest"
-	"github.com/velero-io/velero/pkg/itemoperation"
+	veleroapishared "github.com/vmware-tanzu/velero/pkg/apis/velero/shared"
+	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	"github.com/vmware-tanzu/velero/pkg/cmd/util/cacert"
+	"github.com/vmware-tanzu/velero/pkg/cmd/util/downloadrequest"
+	"github.com/vmware-tanzu/velero/pkg/itemoperation"
 
-	"github.com/velero-io/velero/internal/volume"
-	"github.com/velero-io/velero/pkg/util/collections"
-	"github.com/velero-io/velero/pkg/util/results"
+	"github.com/vmware-tanzu/velero/internal/volume"
+	"github.com/vmware-tanzu/velero/pkg/util/collections"
+	"github.com/vmware-tanzu/velero/pkg/util/results"
 )
 
 // DescribeBackup describes a backup in human-readable format.

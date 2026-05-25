@@ -2,7 +2,7 @@
 ### 2022-01-14
 
 ### Download
-https://github.com/velero-io/velero/releases/tag/v1.8.0
+https://github.com/vmware-tanzu/velero/releases/tag/v1.8.0
 
 ### Container Image
 `velero/velero:v1.8.0`
@@ -41,7 +41,7 @@ When a Backup Storage Location (BSL) is deleted, backup and Restic repository re
 
 #### Breaking changes
 
-Starting in v1.8, Velero will only support Kubernetes v1 CRD meaning that Velero v1.8+ will only run on Kubernetes v1.16+. Before upgrading, make sure you are running a supported Kubernetes version. For more information, see our [compatibility matrix](https://github.com/velero-io/velero#velero-compatibility-matrix).
+Starting in v1.8, Velero will only support Kubernetes v1 CRD meaning that Velero v1.8+ will only run on Kubernetes v1.16+. Before upgrading, make sure you are running a supported Kubernetes version. For more information, see our [compatibility matrix](https://github.com/vmware-tanzu/velero#velero-compatibility-matrix).
 
 #### Upload Progress Monitoring and Item Snapshotter
 Item Snapshotter plugin API was merged.  This will support both Upload Progress

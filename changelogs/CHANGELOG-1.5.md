@@ -2,7 +2,7 @@
 ### 2020-09-16
 
 ### Download
-https://github.com/velero-io/velero/releases/tag/v1.5.1
+https://github.com/vmware-tanzu/velero/releases/tag/v1.5.1
 
 ### Container Image
 `velero/velero:v1.5.1`
@@ -57,7 +57,7 @@ Displays the Timestamps when issued a print or describe (#2748, @thejasbabu)
   * StorageGrid compatibility by removing explicit gzip accept header setting (#2712, @fvsqr)
   * restic: add support for setting SecurityContext (runAsUser, runAsGroup) for restore (#2621, @jaygridley)
   * Add backupValidationFailureTotal to metrics (#2714, @kathpeony)
-  * bump Kubernetes module dependencies to v0.18.4 to fix https://github.com/velero-io/velero/issues/2540 by adding code compatibility with kubernetes v1.18 (#2651, @laverya)
+  * bump Kubernetes module dependencies to v0.18.4 to fix https://github.com/vmware-tanzu/velero/issues/2540 by adding code compatibility with kubernetes v1.18 (#2651, @laverya)
   * Add a BSL controller to handle validation + update BSL status phase (validation removed from the server and no longer blocks when there's any invalid BSL) (#2674, @carlisia)
   * updated acceptable values on cron schedule from 0-7 to 0-6 (#2676, @dthrasher)
   * Improve velero download doc (#2660, @carlisia)

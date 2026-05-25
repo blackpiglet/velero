@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	kbclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	velerov1 "github.com/velero-io/velero/pkg/apis/velero/v1"
+	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 )
 
 func TestGetRepositoryProvider(t *testing.T) {

@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/velero-io/velero/pkg/test"
+	"github.com/vmware-tanzu/velero/pkg/test"
 )
 
 func TestEnabled(t *testing.T) {

@@ -28,11 +28,11 @@ import (
 
 	kbclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/velero-io/velero/internal/volume"
-	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
-	"github.com/velero-io/velero/pkg/cmd/util/cacert"
-	"github.com/velero-io/velero/pkg/cmd/util/downloadrequest"
-	"github.com/velero-io/velero/pkg/util/results"
+	"github.com/vmware-tanzu/velero/internal/volume"
+	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	"github.com/vmware-tanzu/velero/pkg/cmd/util/cacert"
+	"github.com/vmware-tanzu/velero/pkg/cmd/util/downloadrequest"
+	"github.com/vmware-tanzu/velero/pkg/util/results"
 )
 
 // DescribeBackupInSF describes a backup in structured format.

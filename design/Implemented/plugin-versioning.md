@@ -92,7 +92,7 @@ type ObjectStore interface {
 If a method is being added to the `ObjectStore` API, a file would be added to `pkg/plugin/velero/objectstore/v2/` and may contain a new API definition as follows:
 
 ```
-import "github.com/velero-io/velero/pkg/plugin/velero/objectstore/v1"
+import "github.com/vmware-tanzu/velero/pkg/plugin/velero/objectstore/v1"
 
 type ObjectStore interface {
     // Import all the methods from the previous version of the API if they are to be included as is
@@ -147,15 +147,15 @@ The message definitions can be shared however, so these could be extracted from 
 ### Plugin Framework
 
 To allow plugins to register which versions of the API they implement, the plugin framework will need to be adapted to accept new versions.
-Currently, the plugin manager stores a [`map[string]RestartableProcess`](https://github.com/velero-io/velero/blob/main/pkg/plugin/clientmgmt/manager.go#L69), where the string key is the binary name for the plugin process (e.g. "velero-plugin-for-aws").
-Each `RestartableProcess` contains a [`map[kindAndName]interface{}`](https://github.com/velero-io/velero/blob/main/pkg/plugin/clientmgmt/restartable_process.go#L60) which represents each of the unique plugin implementations provided by that binary.
-[`kindAndName`](https://github.com/velero-io/velero/blob/main/pkg/plugin/clientmgmt/registry.go#L42) is a struct which combines the plugin kind (`ObjectStore`, `VolumeSnapshotter`) and the plugin name ("velero.io/aws", "velero.io/azure").
+Currently, the plugin manager stores a [`map[string]RestartableProcess`](https://github.com/vmware-tanzu/velero/blob/main/pkg/plugin/clientmgmt/manager.go#L69), where the string key is the binary name for the plugin process (e.g. "velero-plugin-for-aws").
+Each `RestartableProcess` contains a [`map[kindAndName]interface{}`](https://github.com/vmware-tanzu/velero/blob/main/pkg/plugin/clientmgmt/restartable_process.go#L60) which represents each of the unique plugin implementations provided by that binary.
+[`kindAndName`](https://github.com/vmware-tanzu/velero/blob/main/pkg/plugin/clientmgmt/registry.go#L42) is a struct which combines the plugin kind (`ObjectStore`, `VolumeSnapshotter`) and the plugin name ("velero.io/aws", "velero.io/azure").
 
 Each plugin version registration must be unique (to allow for multiple versions to be implemented within the same plugin binary).
 This will be achieved by adding a specific registration method for each version to the Server interface in the plugin framework.
 For example, if adding a V2 `RestoreItemAction` plugin, the Server interface would be modified to add the `RegisterRestoreItemActionV2` method.
-This would require [adding a new plugin Kind const](https://github.com/velero-io/velero/blob/main/pkg/plugin/framework/plugin_kinds.go#L28-L46) to represent the new plugin version, e.g. `PluginKindRestoreItemActionV2`.
-It also requires the creation of a new implementation of the go-plugin interface ([example](https://github.com/velero-io/velero/blob/main/pkg/plugin/framework/object_store.go)) to support that version and use the generated gRPC code from the proto definition (including a client and server implementation).
+This would require [adding a new plugin Kind const](https://github.com/vmware-tanzu/velero/blob/main/pkg/plugin/framework/plugin_kinds.go#L28-L46) to represent the new plugin version, e.g. `PluginKindRestoreItemActionV2`.
+It also requires the creation of a new implementation of the go-plugin interface ([example](https://github.com/vmware-tanzu/velero/blob/main/pkg/plugin/framework/object_store.go)) to support that version and use the generated gRPC code from the proto definition (including a client and server implementation).
 The Server will also need to be adapted to recognize this new plugin Kind and to serve the new implementation.
 
 Existing plugin Kind consts and registration methods will be left unchanged and will correspond to the current version of the plugin APIs (assumed to be v1).
@@ -241,7 +241,7 @@ In cases where the methods signatures remain the same, the adaptation layer will
 Examples where an adaptation may be safe:
 - A method signature is being changed to add a new parameter but the parameter could be optional (for example, adding a context parameter). The adaptation could call through to the method provided in the previous version but omit the parameter.
 - A method signature is being changed to remove a parameter, but it is safe to pass a default value to the previous version. The adaptation could call through to the method provided in the previous version but use a default value for the parameter.
-- A new method is being added but does not impact any existing behaviour of Velero (for example, a new method which will allow Velero to [wait for additional items to be ready](https://github.com/velero-io/velero/blob/main/design/Implemented/wait-for-additional-items.md)). The adaptation would return a value which allows the existing behaviour to be performed.
+- A new method is being added but does not impact any existing behaviour of Velero (for example, a new method which will allow Velero to [wait for additional items to be ready](https://github.com/vmware-tanzu/velero/blob/main/design/Implemented/wait-for-additional-items.md)). The adaptation would return a value which allows the existing behaviour to be performed.
 - A method is being deleted as it is no longer used. The adaptation would call through to any methods which are still included but would omit the deleted method in the adaptation.
 
 Examples where an adaptation may not be safe:

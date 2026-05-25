@@ -36,12 +36,12 @@ import (
 	"k8s.io/utils/pointer"
 	clientFake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	velerov1 "github.com/velero-io/velero/pkg/apis/velero/v1"
-	velerotest "github.com/velero-io/velero/pkg/test"
-	velerotypes "github.com/velero-io/velero/pkg/types"
-	"github.com/velero-io/velero/pkg/util"
-	"github.com/velero-io/velero/pkg/util/boolptr"
-	"github.com/velero-io/velero/pkg/util/kube"
+	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	velerotest "github.com/vmware-tanzu/velero/pkg/test"
+	velerotypes "github.com/vmware-tanzu/velero/pkg/types"
+	"github.com/vmware-tanzu/velero/pkg/util"
+	"github.com/vmware-tanzu/velero/pkg/util/boolptr"
+	"github.com/vmware-tanzu/velero/pkg/util/kube"
 
 	storagev1api "k8s.io/api/storage/v1"
 )

@@ -4,7 +4,7 @@ This enhancement will allow the user to set include and exclude filters for reso
 these filters are reusable and the user will not need to set them each time they create a backup.
 
 ## Background
-As mentioned in issue [#8610](https://github.com/velero-io/velero/issues/8610).  When there's a long list of resources 
+As mentioned in issue [#8610](https://github.com/vmware-tanzu/velero/issues/8610).  When there's a long list of resources 
 to include or exclude in a backup, it can be cumbersome to set them each time a backup is created.  There's a requirement to
 set these filters in a separate data structure so that they can be reused in multiple backups.
 

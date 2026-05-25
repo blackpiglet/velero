@@ -12,13 +12,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/velero-io/velero/internal/resourcepolicies"
-	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
-	"github.com/velero-io/velero/pkg/kuberesource"
-	"github.com/velero-io/velero/pkg/util/boolptr"
-	kubeutil "github.com/velero-io/velero/pkg/util/kube"
-	podvolumeutil "github.com/velero-io/velero/pkg/util/podvolume"
-	vhutil "github.com/velero-io/velero/pkg/util/volumehelper"
+	"github.com/vmware-tanzu/velero/internal/resourcepolicies"
+	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	"github.com/vmware-tanzu/velero/pkg/kuberesource"
+	"github.com/vmware-tanzu/velero/pkg/util/boolptr"
+	kubeutil "github.com/vmware-tanzu/velero/pkg/util/kube"
+	podvolumeutil "github.com/vmware-tanzu/velero/pkg/util/podvolume"
+	vhutil "github.com/vmware-tanzu/velero/pkg/util/volumehelper"
 )
 
 type volumeHelperImpl struct {

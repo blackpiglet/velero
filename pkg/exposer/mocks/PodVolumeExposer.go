@@ -9,7 +9,7 @@ import (
 	"time"
 
 	mock "github.com/stretchr/testify/mock"
-	"github.com/velero-io/velero/pkg/exposer"
+	"github.com/vmware-tanzu/velero/pkg/exposer"
 	"k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

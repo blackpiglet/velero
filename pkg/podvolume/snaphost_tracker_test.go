@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/velero-io/velero/pkg/builder"
+	"github.com/vmware-tanzu/velero/pkg/builder"
 )
 
 func TestOptoutVolume(t *testing.T) {

@@ -24,9 +24,9 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
-	"github.com/velero-io/velero/pkg/plugin/framework/common"
-	proto "github.com/velero-io/velero/pkg/plugin/generated"
-	"github.com/velero-io/velero/pkg/plugin/velero"
+	"github.com/vmware-tanzu/velero/pkg/plugin/framework/common"
+	proto "github.com/vmware-tanzu/velero/pkg/plugin/generated"
+	"github.com/vmware-tanzu/velero/pkg/plugin/velero"
 )
 
 var _ velero.DeleteItemAction = &DeleteItemActionGRPCClient{}

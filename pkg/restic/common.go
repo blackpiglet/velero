@@ -26,10 +26,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/velero-io/velero/internal/credentials"
-	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
-	repoconfig "github.com/velero-io/velero/pkg/repository/config"
-	"github.com/velero-io/velero/pkg/util/filesystem"
+	"github.com/vmware-tanzu/velero/internal/credentials"
+	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	repoconfig "github.com/vmware-tanzu/velero/pkg/repository/config"
+	"github.com/vmware-tanzu/velero/pkg/util/filesystem"
 )
 
 const (

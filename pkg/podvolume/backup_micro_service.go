@@ -31,12 +31,12 @@ import (
 	cachetool "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
-	"github.com/velero-io/velero/internal/credentials"
-	velerov1api "github.com/velero-io/velero/pkg/apis/velero/v1"
-	"github.com/velero-io/velero/pkg/datapath"
-	"github.com/velero-io/velero/pkg/repository"
-	"github.com/velero-io/velero/pkg/uploader"
-	"github.com/velero-io/velero/pkg/util/kube"
+	"github.com/vmware-tanzu/velero/internal/credentials"
+	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	"github.com/vmware-tanzu/velero/pkg/datapath"
+	"github.com/vmware-tanzu/velero/pkg/repository"
+	"github.com/vmware-tanzu/velero/pkg/uploader"
+	"github.com/vmware-tanzu/velero/pkg/util/kube"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )

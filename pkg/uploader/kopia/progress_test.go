@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/velero-io/velero/pkg/uploader"
+	"github.com/vmware-tanzu/velero/pkg/uploader"
 )
 
 type fakeProgressUpdater struct{}

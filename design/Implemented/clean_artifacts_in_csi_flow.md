@@ -371,4 +371,4 @@ In this design, no new information is added in backup and restore. As a result, 
 
 ## Open Issues
 Please notice the CSI snapshot backup and restore mechanism not supporting all file-store-based volume, e.g. Azure Files, EFS or vSphere CNS File Volume. Only block-based volumes are supported.
-Refer to [this comment](https://github.com/velero-io/velero/issues/3151#issuecomment-2623507686) for more details.
+Refer to [this comment](https://github.com/vmware-tanzu/velero/issues/3151#issuecomment-2623507686) for more details.

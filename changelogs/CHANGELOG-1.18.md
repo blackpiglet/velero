@@ -1,7 +1,7 @@
 ## v1.18
 
 ### Download
-https://github.com/velero-io/velero/releases/tag/v1.18.0
+https://github.com/vmware-tanzu/velero/releases/tag/v1.18.0
 
 ### Container Image
 `velero/velero:v1.18.0`
@@ -16,7 +16,7 @@ https://velero.io/docs/v1.18/upgrade-to-1.18/
 #### Concurrent backup
 In v1.18, Velero is capable to process multiple backups concurrently. This is a significant usability improvement, especially for multiple tenants or multiple users case, backups submitted from different users could run their backups simultaneously without interfering with each other.  
 
-Check design https://github.com/velero-io/velero/blob/main/design/Implemented/concurrent-backup-processing.md for more details.
+Check design https://github.com/vmware-tanzu/velero/blob/main/design/Implemented/concurrent-backup-processing.md for more details.
 
 #### Cache volume for data movers
 In v1.18, Velero allows users to configure cache volumes for data mover pods during restore for CSI snapshot data movement and fs-backup. This brings below benefits:
@@ -24,7 +24,7 @@ In v1.18, Velero allows users to configure cache volumes for data mover pods dur
 - Solve the problem that multiple data mover pods fail to run concurrently in one node when the node's ephemeral disk is limited
 - Working together with backup repository's cache limit configuration, cache volume with appropriate size helps to improve the restore throughput
 
-Check design https://github.com/velero-io/velero/blob/main/design/Implemented/backup-repo-cache-volume.md for more details.
+Check design https://github.com/vmware-tanzu/velero/blob/main/design/Implemented/backup-repo-cache-volume.md for more details.
 
 #### Incremental size for data movers
 In v1.18, Velero allows users to observe the incremental size of data movers backups for CSI snapshot data movement and fs-backup, so that users could visually see the data reduction due to incremental backup.
@@ -53,7 +53,7 @@ kopia: 0.22.3
 
 ### Breaking changes
 #### Deprecation of PVC selected node feature
-According to [Velero deprecation policy](https://github.com/velero-io/velero/blob/main/GOVERNANCE.md#deprecation-policy), PVC selected node feature is deprecated in v1.18. Velero could appropriately handle PVC's selected-node annotation, so users don't need to do anything particularly.
+According to [Velero deprecation policy](https://github.com/vmware-tanzu/velero/blob/main/GOVERNANCE.md#deprecation-policy), PVC selected node feature is deprecated in v1.18. Velero could appropriately handle PVC's selected-node annotation, so users don't need to do anything particularly.
 
 ### All Changes
 * Remove backup from running list when backup fails validation (#9498, @sseago)

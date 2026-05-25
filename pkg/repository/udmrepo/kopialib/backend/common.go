@@ -29,7 +29,7 @@ import (
 	"github.com/kopia/kopia/repo/hashing"
 	"github.com/kopia/kopia/repo/splitter"
 
-	"github.com/velero-io/velero/pkg/repository/udmrepo"
+	"github.com/vmware-tanzu/velero/pkg/repository/udmrepo"
 )
 
 const (

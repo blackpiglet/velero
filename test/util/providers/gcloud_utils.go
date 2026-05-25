@@ -32,7 +32,7 @@ import (
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 
-	"github.com/velero-io/velero/test"
+	"github.com/vmware-tanzu/velero/test"
 )
 
 type GCSStorage string

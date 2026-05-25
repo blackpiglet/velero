@@ -1,7 +1,7 @@
 ## v1.14
 
 ### Download
-https://github.com/velero-io/velero/releases/tag/v1.14.0
+https://github.com/vmware-tanzu/velero/releases/tag/v1.14.0
 
 ### Container Image
 `velero/velero:v1.14.0`

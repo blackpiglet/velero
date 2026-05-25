@@ -2,7 +2,7 @@
 
 ## Abstract
 
-Currently, the [VolumePolicies feature](https://github.com/velero-io/velero/blob/main/design/Implemented/handle-backup-of-volumes-by-resources-filters.md) which can be used to filter/handle volumes during backup only supports the skip action on matching conditions. Users need more actions to be supported.
+Currently, the [VolumePolicies feature](https://github.com/vmware-tanzu/velero/blob/main/design/Implemented/handle-backup-of-volumes-by-resources-filters.md) which can be used to filter/handle volumes during backup only supports the skip action on matching conditions. Users need more actions to be supported.
 
 ## Background
 
@@ -58,17 +58,17 @@ volumePolicies:
 ```
 ## High-Level Design
 - When the VolumePolicy action is set as `fs-backup` the backup workflow modifications would be:
-  - We call [backupItem() -> backupItemInternal()](https://github.com/velero-io/velero/blob/main/pkg/backup/item_backupper.go#L95) on all the items that are to be backed up
-  - Here when we encounter [Pod as an item ](https://github.com/velero-io/velero/blob/main/pkg/backup/item_backupper.go#L195)
+  - We call [backupItem() -> backupItemInternal()](https://github.com/vmware-tanzu/velero/blob/main/pkg/backup/item_backupper.go#L95) on all the items that are to be backed up
+  - Here when we encounter [Pod as an item ](https://github.com/vmware-tanzu/velero/blob/main/pkg/backup/item_backupper.go#L195)
   - We will have to modify the backup workflow to account for the `fs-backup` VolumePolicy action
 
 
 - When the VolumePolicy action is set as `snapshot` the backup workflow modifications would be:
-  - Once again, We call [backupItem() -> backupItemInternal()](https://github.com/velero-io/velero/blob/main/pkg/backup/item_backupper.go#L95) on all the items that are to be backed up
-  - Here when we encounter [Persistent Volume as an item](https://github.com/velero-io/velero/blob/d4128542590470b204a642ee43311921c11db880/pkg/backup/item_backupper.go#L253)
-  - And we call the [takePVSnapshot func](https://github.com/velero-io/velero/blob/d4128542590470b204a642ee43311921c11db880/pkg/backup/item_backupper.go#L508)
+  - Once again, We call [backupItem() -> backupItemInternal()](https://github.com/vmware-tanzu/velero/blob/main/pkg/backup/item_backupper.go#L95) on all the items that are to be backed up
+  - Here when we encounter [Persistent Volume as an item](https://github.com/vmware-tanzu/velero/blob/d4128542590470b204a642ee43311921c11db880/pkg/backup/item_backupper.go#L253)
+  - And we call the [takePVSnapshot func](https://github.com/vmware-tanzu/velero/blob/d4128542590470b204a642ee43311921c11db880/pkg/backup/item_backupper.go#L508)
   - We need to modify the takePVSnapshot function to account for the `snapshot` VolumePolicy action.
-  - In case of csi snapshots for PVC objects, these snapshot actions are taken by the velero-plugin-for-csi, we need to modify the [executeActions()](https://github.com/velero-io/velero/blob/512fe0dabdcb3bbf1ca68a9089056ae549663bcf/pkg/backup/item_backupper.go#L232) function to account for the `snapshot` VolumePolicy action.
+  - In case of csi snapshots for PVC objects, these snapshot actions are taken by the velero-plugin-for-csi, we need to modify the [executeActions()](https://github.com/vmware-tanzu/velero/blob/512fe0dabdcb3bbf1ca68a9089056ae549663bcf/pkg/backup/item_backupper.go#L232) function to account for the `snapshot` VolumePolicy action.
 
 **Note:** `Snapshot` action can either be a native snapshot or a csi snapshot, as is the case with the current flow where velero itself makes the decision based on the backup CR.
 
@@ -80,9 +80,9 @@ volumePolicies:
   - Else continue with the annotation based legacy approach workflow.
 
 - Modifications needed for `snapshot` action:
-  - In the [takePVSnapshot function](https://github.com/velero-io/velero/blob/d4128542590470b204a642ee43311921c11db880/pkg/backup/item_backupper.go#L508) we will check the PV fits the volume policy criteria and see if the associated action is `snapshot`
+  - In the [takePVSnapshot function](https://github.com/vmware-tanzu/velero/blob/d4128542590470b204a642ee43311921c11db880/pkg/backup/item_backupper.go#L508) we will check the PV fits the volume policy criteria and see if the associated action is `snapshot`
   - If it is not snapshot then we skip the further workflow and avoid taking the snapshot of the PV
-  - Similarly, For csi snapshot of PVC object, we need to do similar changes in [executeAction() function](https://github.com/velero-io/velero/blob/512fe0dabdcb3bbf1ca68a9089056ae549663bcf/pkg/backup/item_backupper.go#L348). we will check the PVC fits the volume policy criteria and see if the associated action is `snapshot` via csi plugin
+  - Similarly, For csi snapshot of PVC object, we need to do similar changes in [executeAction() function](https://github.com/vmware-tanzu/velero/blob/512fe0dabdcb3bbf1ca68a9089056ae549663bcf/pkg/backup/item_backupper.go#L348). we will check the PVC fits the volume policy criteria and see if the associated action is `snapshot` via csi plugin
   - If it is not snapshot then we skip the csi BIA execute action and avoid taking the snapshot of the PVC by not invoking the csi plugin action for the PVC
 
 **Note:**
@@ -338,7 +338,7 @@ In the future, we envision the following actions that can be implemented:
 
 ## Related to Design
 
-[Handle backup of volumes by resources filters](https://github.com/velero-io/velero/blob/main/design/Implemented/handle-backup-of-volumes-by-resources-filters.md)
+[Handle backup of volumes by resources filters](https://github.com/vmware-tanzu/velero/blob/main/design/Implemented/handle-backup-of-volumes-by-resources-filters.md)
 
 ## Alternatives Considered
 Same as the earlier design as this is an extension of the original VolumePolicies design

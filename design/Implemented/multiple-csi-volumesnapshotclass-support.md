@@ -95,7 +95,7 @@ The Velero CSI plugin chooses the VolumeSnapshotClass in the cluster that has th
     We can add support for  - velero backup create my-backup --annotations "velero.io/csi:csi.cloud.disk.driver=csi-diskdriver-snapclass"
 
 ### Stage 2 Approach
-The above annotations route is to get started and for initial design closure/ implementation, north star is to either introduce CSI specific fields (considering that CSI might be a very core part of velero going forward) in the backup/restore CR OR leverage the pluginInputs field as being tracked in: https://github.com/velero-io/velero/pull/5981
+The above annotations route is to get started and for initial design closure/ implementation, north star is to either introduce CSI specific fields (considering that CSI might be a very core part of velero going forward) in the backup/restore CR OR leverage the pluginInputs field as being tracked in: https://github.com/vmware-tanzu/velero/pull/5981
 
 Refer section Alternatives 2. **Through generic property bag in the velero contracts**: in the design doc for more details on the pluginInputs field.
 
