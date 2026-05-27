@@ -28,6 +28,7 @@ import (
 	"github.com/kopia/kopia/fs"
 	"github.com/kopia/kopia/repo"
 	"github.com/kopia/kopia/repo/compression"
+	"github.com/kopia/kopia/repo/content"
 	"github.com/kopia/kopia/repo/content/index"
 	"github.com/kopia/kopia/repo/maintenance"
 	"github.com/kopia/kopia/repo/manifest"
@@ -78,6 +79,17 @@ type kopiaObjectWriter struct {
 	rawWriter object.Writer
 }
 
+type kopiaObjectWriterEx struct {
+	ctx           context.Context
+	rawRepoWriter repo.RepositoryWriter
+	parentEntries []object.IndirectObjectEntry
+	blockSize     int64
+	description   string
+	compressor    compression.Name
+	splitter      string
+	logger        logrus.FieldLogger
+}
+
 type openOptions struct {
 	repoLogger io.Writer
 }
@@ -88,6 +100,8 @@ const (
 	overwriteFullMaintainInterval  = time.Duration(0)
 	overwriteQuickMaintainInterval = time.Duration(0)
 	repoBackend                    = "kopia"
+	fixedSplitter1M                = "FIXED-1M"
+	fixedBlockSize                 = 1 << 20
 )
 
 var kopiaRepoOpen = repo.Open
@@ -391,26 +405,86 @@ func (kr *kopiaRepository) Close(ctx context.Context) error {
 	return nil
 }
 
+func (kr *kopiaRepository) ContentInfo(ctx context.Context, contentID content.ID) (content.Info, error) {
+	return kr.rawRepo.ContentInfo(kopia.SetupKopiaLog(ctx, kr.logger), contentID)
+}
+
+func (kr *kopiaRepository) GetContent(ctx context.Context, contentID content.ID) ([]byte, error) {
+	directRepo, ok := kr.rawRepo.(repo.DirectRepository)
+	if !ok {
+		return nil, errors.New("invalid repo interface")
+	}
+
+	return directRepo.ContentReader().GetContent(kopia.SetupKopiaLog(ctx, kr.logger), contentID)
+}
+
+func (kr *kopiaRepository) PrefetchContents(ctx context.Context, contentIDs []content.ID, prefetchHint string) []content.ID {
+	return kr.rawRepo.PrefetchContents(kopia.SetupKopiaLog(ctx, kr.logger), contentIDs, prefetchHint)
+}
+
+func (kr *kopiaRepository) getFlattenedEntries(ctx context.Context, rawID object.ID) ([]object.IndirectObjectEntry, error) {
+	indexObjectID, ok := rawID.IndexObjectID()
+	if !ok {
+		return nil, errors.Errorf("object is not an indirect object, %v", rawID)
+	}
+
+	return object.LoadIndexObject(kopia.SetupKopiaLog(ctx, kr.logger), kr, indexObjectID)
+}
+
 func (kr *kopiaRepository) NewObjectWriter(ctx context.Context, opt udmrepo.ObjectWriteOptions) (udmrepo.ObjectWriter, error) {
 	if kr.rawWriter == nil {
 		return nil, errors.New("repo writer is closed or not open")
 	}
 
-	writer := kr.rawWriter.NewObjectWriter(kopia.SetupKopiaLog(ctx, kr.logger), object.WriterOptions{
-		Description:        opt.Description,
-		Prefix:             index.IDPrefix(opt.Prefix),
-		AsyncWrites:        opt.AsyncWrites,
-		Compressor:         getCompressorForObject(opt),
-		MetadataCompressor: getMetadataCompressor(),
-	})
+	var parentEntries []object.IndirectObjectEntry
+	if opt.AccessMode == udmrepo.ObjectDataAccessModeBlock {
+		if opt.ParentObject != "" {
+			kr.logger.Infof("Write object %s in block mode with parent %s", opt.Description, opt.ParentObject)
 
-	if writer == nil {
-		return nil, errors.Errorf("error creating writer for object %s", opt.Description)
+			rawID, err := object.ParseID(string(opt.ParentObject))
+			if err != nil {
+				return nil, errors.Wrapf(err, "error parsing parent object ID from %v", opt.ParentObject)
+			}
+
+			parentEntries, err = kr.getFlattenedEntries(ctx, rawID)
+			if err != nil {
+				return nil, errors.Wrapf(err, "error getting parent object entries from %v", opt.ParentObject)
+			}
+		} else {
+			kr.logger.Infof("Write object %s in block mode without parent", opt.Description)
+		}
+
+		return &kopiaObjectWriterEx{
+			ctx:           ctx,
+			rawRepoWriter: kr.rawWriter,
+			parentEntries: parentEntries,
+			description:   opt.Description,
+			compressor:    getCompressorForObject(opt),
+			blockSize:     fixedBlockSize,
+			splitter:      fixedSplitter1M,
+			logger:        kr.logger,
+		}, nil
+	} else {
+		if opt.ParentObject != "" {
+			return nil, errors.Errorf("parent object is only supported for block mode")
+		}
+
+		writer := kr.rawWriter.NewObjectWriter(kopia.SetupKopiaLog(ctx, kr.logger), object.WriterOptions{
+			Description:        opt.Description,
+			Prefix:             index.IDPrefix(opt.Prefix),
+			AsyncWrites:        opt.AsyncWrites,
+			Compressor:         getCompressorForObject(opt),
+			MetadataCompressor: getMetadataCompressor(),
+		})
+
+		if writer == nil {
+			return nil, errors.Errorf("error creating writer for object %s", opt.Description)
+		}
+
+		return &kopiaObjectWriter{
+			rawWriter: writer,
+		}, nil
 	}
-
-	return &kopiaObjectWriter{
-		rawWriter: writer,
-	}, nil
 }
 
 const kopiaDirStreamType = "kopia:directory"
@@ -731,7 +805,6 @@ func (kow *kopiaObjectWriter) Write(p []byte) (int, error) {
 	return kow.rawWriter.Write(p)
 }
 
-// TODO add implementation in following PRs
 func (kow *kopiaObjectWriter) WriteAt(p []byte, offset int64) (int, error) {
 	return 0, errors.New("not supported")
 }
@@ -775,6 +848,30 @@ func (kow *kopiaObjectWriter) Close() error {
 	kow.rawWriter = nil
 
 	return nil
+}
+
+// TODO add implementation in following PRs
+func (kow *kopiaObjectWriterEx) Write(p []byte) (int, error) {
+	return 0, errors.New("not implemented")
+}
+
+// TODO add implementation in following PRs
+func (kow *kopiaObjectWriterEx) WriteAt(p []byte, offset int64) (int, error) {
+	return 0, errors.New("not implemented")
+}
+
+func (kow *kopiaObjectWriterEx) Checkpoint() (udmrepo.ID, error) {
+	return udmrepo.ID(""), errors.New("not supported")
+}
+
+// TODO add implementation in following PRs
+func (kow *kopiaObjectWriterEx) Result() (udmrepo.ID, error) {
+	return udmrepo.ID(""), errors.New("not implemented")
+}
+
+// TODO add implementation in following PRs
+func (kow *kopiaObjectWriterEx) Close() error {
+	return errors.New("not implemented")
 }
 
 // getCompressorForObject returns the compressor for an object, at present, we don't support compression
