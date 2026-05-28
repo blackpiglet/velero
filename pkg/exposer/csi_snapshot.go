@@ -34,6 +34,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/vmware-tanzu/velero/pkg/datamover"
 	"github.com/vmware-tanzu/velero/pkg/nodeagent"
 	velerotypes "github.com/vmware-tanzu/velero/pkg/types"
 	"github.com/vmware-tanzu/velero/pkg/util"
@@ -97,9 +98,6 @@ type CSISnapshotExposeParam struct {
 
 	// DataMover is the data mover type, e.g., velero-fs, velero-block
 	DataMover string
-
-	// CSISnapshotMetadataServiceConfigs is the config for CSI snapshot metadata service
-	CSISnapshotMetadataServiceConfigs *velerotypes.CSISnapshotMetadataService
 }
 
 // CSISnapshotExposeWaitParam define the input param for WaitExposed of CSI snapshots
@@ -271,7 +269,6 @@ func (e *csiSnapshotExposer) Expose(ctx context.Context, ownerObject corev1api.O
 		csiExposeParam.PriorityClassName,
 		intoleratableNodes,
 		volumeTopology,
-		csiExposeParam.CSISnapshotMetadataServiceConfigs,
 	)
 	if err != nil {
 		return errors.Wrap(err, "error to create backup pod")
@@ -459,7 +456,7 @@ func (e *csiSnapshotExposer) CleanUp(ctx context.Context, ownerObject corev1api.
 }
 
 func getVolumeModeByAccessMode(accessMode string, dataMover string) (corev1api.PersistentVolumeMode, error) {
-	if dataMover == velerotypes.DataMoverTypeVeleroBlock {
+	if dataMover == datamover.DataMoverTypeVeleroBlock {
 		return corev1api.PersistentVolumeBlock, nil
 	}
 
@@ -616,7 +613,6 @@ func (e *csiSnapshotExposer) createBackupPod(
 	priorityClassName string,
 	intoleratableNodes []string,
 	volumeTopology *corev1api.NodeSelector,
-	csiSnapshotMetadataServiceConfigs *velerotypes.CSISnapshotMetadataService,
 ) (*corev1api.Pod, error) {
 	podName := ownerObject.Name
 
@@ -671,12 +667,6 @@ func (e *csiSnapshotExposer) createBackupPod(
 
 	args = append(args, podInfo.logFormatArgs...)
 	args = append(args, podInfo.logLevelArgs...)
-
-	if csiSnapshotMetadataServiceConfigs != nil {
-		if csiSnapshotMetadataServiceConfigs.SAName != "" {
-			args = append(args, fmt.Sprintf("--csi-snapshot-metadata-service-sa=%s", csiSnapshotMetadataServiceConfigs.SAName))
-		}
-	}
 
 	if affinity == nil {
 		affinity = &kube.LoadAffinity{}

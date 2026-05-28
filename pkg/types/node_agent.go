@@ -74,10 +74,6 @@ type CachePVC struct {
 	ResidentThresholdInMB int64 `json:"residentThresholdInMB,omitempty"`
 }
 
-type CSISnapshotMetadataService struct {
-	SAName string `json:"saName,omitempty"`
-}
-
 type NodeAgentConfigs struct {
 	// LoadConcurrency is the config for data path load concurrency per node.
 	LoadConcurrency *LoadConcurrency `json:"loadConcurrency,omitempty"`
@@ -108,7 +104,4 @@ type NodeAgentConfigs struct {
 
 	// PodLabels are labels to be added to pods created by node-agent, i.e., data mover pods.
 	PodLabels map[string]string `json:"podLabels,omitempty"`
-
-	// CSISnapshotMetadataServiceConfigs is the config for CSI snapshot metadata service
-	CSISnapshotMetadataServiceConfigs *CSISnapshotMetadataService `json:"csiSnapshotMetadataServiceConfigs,omitempty"`
 }

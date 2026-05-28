@@ -156,7 +156,7 @@ func (r *DataUploadReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, errors.Wrap(err, "getting DataUpload")
 	}
 
-	if !datamover.IsBuiltInUploader(du.Spec.DataMover) {
+	if !datamover.IsBuiltInDataMover(du.Spec.DataMover) {
 		log.WithField("Data mover", du.Spec.DataMover).Debug("it is not one built-in data mover which is not supported by Velero")
 		return ctrl.Result{}, nil
 	}
@@ -937,7 +937,7 @@ func (r *DataUploadReconciler) setupExposeParam(du *velerov2alpha1api.DataUpload
 		}
 
 		nodeOS := ""
-		if du.Spec.DataMover == velerotypes.DataMoverTypeVeleroBlock {
+		if du.Spec.DataMover == datamover.DataMoverTypeVeleroBlock {
 			nodeOS = kube.NodeOSLinux
 		} else {
 			nodeOS = kube.GetPVCAttachingNodeOS(pvc, r.kubeClient.CoreV1(), r.kubeClient.StorageV1(), log)
@@ -1015,6 +1015,7 @@ func (r *DataUploadReconciler) setupExposeParam(du *velerov2alpha1api.DataUpload
 			Resources:             r.podResources,
 			NodeOS:                nodeOS,
 			PriorityClassName:     r.dataMovePriorityClass,
+			DataMover:             du.Spec.DataMover,
 		}, nil
 	}
 
