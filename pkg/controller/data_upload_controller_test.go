@@ -72,11 +72,25 @@ type FakeClient struct {
 	patchError     error
 	updateConflict error
 	listError      error
+	getErrorMap    map[string]error // key: object kind or name
 }
 
 func (c *FakeClient) Get(ctx context.Context, key kbclient.ObjectKey, obj kbclient.Object, opts ...kbclient.GetOption) error {
 	if c.getError != nil {
 		return c.getError
+	}
+
+	// Check if there's a specific error for this object type
+	if c.getErrorMap != nil {
+		objType := fmt.Sprintf("%T", obj)
+		if err, ok := c.getErrorMap[objType]; ok {
+			return err
+		}
+
+		// Check if there's a specific error for this object name
+		if err, ok := c.getErrorMap[key.Name]; ok {
+			return err
+		}
 	}
 
 	return c.Client.Get(ctx, key, obj)
@@ -209,9 +223,13 @@ func initDataUploaderReconcilerWithError(needError ...error) (*DataUploadReconci
 	if err != nil {
 		return nil, err
 	}
+	err = snapshotv1api.AddToScheme(scheme)
+	if err != nil {
+		return nil, err
+	}
 
 	fakeClient := &FakeClient{
-		Client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+		Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(vsObject, node).Build(),
 	}
 
 	for k := range needError {
@@ -505,7 +523,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name:     "du succeeds for accepted",
 			du:       dataUploadBuilder().Finalizers([]string{DataUploadDownloadFinalizer}).SnapshotType(fakeSnapshotType).Result(),
-			pvc:      builder.ForPersistentVolumeClaim("fake-ns", "test-pvc").Result(),
+			pvc:      builder.ForPersistentVolumeClaim("fake-ns", "test-pvc").VolumeName("test-pv").Result(),
 			expected: dataUploadBuilder().Finalizers([]string{DataUploadDownloadFinalizer}).Phase(velerov2alpha1api.DataUploadPhaseAccepted).Result(),
 		},
 		{
@@ -636,6 +654,15 @@ func TestReconcile(t *testing.T) {
 			if test.pvc != nil {
 				err = r.client.Create(ctx, test.pvc)
 				require.NoError(t, err)
+
+				// Create the corresponding PV if PVC references one
+				if test.pvc.Spec.VolumeName != "" {
+					pv := builder.ForPersistentVolume(test.pvc.Spec.VolumeName).
+						CSI("csi.driver", "test-volume-id").
+						ClaimRef(test.pvc.Namespace, test.pvc.Name).Result()
+					err = r.client.Create(ctx, pv)
+					require.NoError(t, err)
+				}
 			}
 
 			if test.dataMgr != nil {
@@ -1531,6 +1558,245 @@ func TestDataUploadSetupExposeParam(t *testing.T) {
 			// Labels and Annotations
 			assert.Equal(t, tt.want.labels, csiParam.HostingPodLabels)
 			assert.Equal(t, tt.want.annotations, csiParam.HostingPodAnnotations)
+		})
+	}
+}
+
+func TestUpdateDataUploadStatus(t *testing.T) {
+	const (
+		testNamespace    = "test-ns"
+		testDUName       = "test-du"
+		testVSName       = "test-vs"
+		testPVCName      = "test-pvc"
+		testPVName       = "test-pv"
+		testStorageClass = "default"
+		testChangeID     = "test-change-id"
+		testVolumeID     = "test-volume-id"
+		testVolumeIDFull = "test-volume-id+extra"
+	)
+
+	tests := []struct {
+		name           string
+		du             *velerov2alpha1api.DataUpload
+		vs             *snapshotv1api.VolumeSnapshot
+		pvc            *corev1api.PersistentVolumeClaim
+		pv             *corev1api.PersistentVolume
+		getVSErr       error
+		getPVCErr      error
+		getPVErr       error
+		expectedCBT    *velerov2alpha1api.CBTStatus
+		expectedErr    bool
+		expectedErrMsg string
+	}{
+		{
+			name: "successful update with VSphere annotations",
+			du: builder.ForDataUpload(testNamespace, testDUName).
+				SourceNamespace(testNamespace).
+				SourcePVC(testPVCName).
+				CSISnapshot(&velerov2alpha1api.CSISnapshotSpec{
+					VolumeSnapshot: testVSName,
+					StorageClass:   testStorageClass,
+				}).Result(),
+			vs: &snapshotv1api.VolumeSnapshot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testVSName,
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						"csi.vsphere.volume/change-id": testChangeID,
+						"csi.vsphere.volume/snapshot":  testVolumeIDFull,
+					},
+				},
+			},
+			expectedCBT: &velerov2alpha1api.CBTStatus{
+				ChangeID: testChangeID,
+				VolumeID: testVolumeID,
+			},
+			expectedErr: false,
+		},
+		{
+			name: "successful update with PVC and PV when no VSphere annotations",
+			du: builder.ForDataUpload(testNamespace, testDUName).
+				SourceNamespace(testNamespace).
+				SourcePVC(testPVCName).
+				CSISnapshot(&velerov2alpha1api.CSISnapshotSpec{
+					VolumeSnapshot: testVSName,
+					StorageClass:   testStorageClass,
+				}).Result(),
+			vs: &snapshotv1api.VolumeSnapshot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testVSName,
+					Namespace: testNamespace,
+				},
+			},
+			pvc: builder.ForPersistentVolumeClaim(testNamespace, testPVCName).
+				VolumeName(testPVName).Result(),
+			pv: builder.ForPersistentVolume(testPVName).
+				CSI("csi.driver", testVolumeID).Result(),
+			expectedCBT: &velerov2alpha1api.CBTStatus{
+				ChangeID: testVSName,
+				VolumeID: testVolumeID,
+			},
+			expectedErr: false,
+		},
+		{
+			name: "error when CSISnapshot is nil",
+			du: builder.ForDataUpload(testNamespace, testDUName).
+				SourceNamespace(testNamespace).
+				SourcePVC(testPVCName).Result(),
+			expectedErr:    true,
+			expectedErrMsg: "DU test-ns/test-du csi snapshot is nil",
+		},
+		{
+			name: "error when VolumeSnapshot does not exist",
+			du: builder.ForDataUpload(testNamespace, testDUName).
+				SourceNamespace(testNamespace).
+				SourcePVC(testPVCName).
+				CSISnapshot(&velerov2alpha1api.CSISnapshotSpec{
+					VolumeSnapshot: testVSName,
+					StorageClass:   testStorageClass,
+				}).Result(),
+			getVSErr:       apierrors.NewNotFound(snapshotv1api.Resource("volumesnapshot"), testVSName),
+			expectedErr:    true,
+			expectedErrMsg: "error getting volume snapshot",
+		},
+		{
+			name: "error when PVC does not exist (no VSphere annotations)",
+			du: builder.ForDataUpload(testNamespace, testDUName).
+				SourceNamespace(testNamespace).
+				SourcePVC(testPVCName).
+				CSISnapshot(&velerov2alpha1api.CSISnapshotSpec{
+					VolumeSnapshot: testVSName,
+					StorageClass:   testStorageClass,
+				}).Result(),
+			vs: &snapshotv1api.VolumeSnapshot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testVSName,
+					Namespace: testNamespace,
+				},
+			},
+			getPVCErr:      apierrors.NewNotFound(corev1api.Resource("persistentvolumeclaim"), testPVCName),
+			expectedErr:    true,
+			expectedErrMsg: "failed to get pvc",
+		},
+		{
+			name: "error when PV does not exist (no VSphere annotations)",
+			du: builder.ForDataUpload(testNamespace, testDUName).
+				SourceNamespace(testNamespace).
+				SourcePVC(testPVCName).
+				CSISnapshot(&velerov2alpha1api.CSISnapshotSpec{
+					VolumeSnapshot: testVSName,
+					StorageClass:   testStorageClass,
+				}).Result(),
+			vs: &snapshotv1api.VolumeSnapshot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testVSName,
+					Namespace: testNamespace,
+				},
+			},
+			pvc: &corev1api.PersistentVolumeClaim{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testPVCName,
+					Namespace: testNamespace,
+				},
+				Spec: corev1api.PersistentVolumeClaimSpec{
+					VolumeName: testPVName,
+				},
+			},
+			getPVErr:       apierrors.NewNotFound(corev1api.Resource("persistentvolume"), testPVName),
+			expectedErr:    true,
+			expectedErrMsg: "failed to get pv",
+		},
+		{
+			name: "successful update with partial VSphere annotations (only change-id)",
+			du: builder.ForDataUpload(testNamespace, testDUName).
+				SourceNamespace(testNamespace).
+				SourcePVC(testPVCName).
+				CSISnapshot(&velerov2alpha1api.CSISnapshotSpec{
+					VolumeSnapshot: testVSName,
+					StorageClass:   testStorageClass,
+				}).Result(),
+			vs: &snapshotv1api.VolumeSnapshot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testVSName,
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						"csi.vsphere.volume/change-id": testChangeID,
+					},
+				},
+			},
+			pvc: builder.ForPersistentVolumeClaim(testNamespace, testPVCName).
+				VolumeName(testPVName).Result(),
+			pv: builder.ForPersistentVolume(testPVName).
+				CSI("csi.driver", testVolumeID).Result(),
+			expectedCBT: &velerov2alpha1api.CBTStatus{
+				ChangeID: testVSName,
+				VolumeID: testVolumeID,
+			},
+			expectedErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			require.NoError(t, velerov1api.AddToScheme(scheme))
+			require.NoError(t, velerov2alpha1api.AddToScheme(scheme))
+			require.NoError(t, corev1api.AddToScheme(scheme))
+			require.NoError(t, snapshotv1api.AddToScheme(scheme))
+
+			// Build client with required objects
+			clientBuilder := fake.NewClientBuilder().WithScheme(scheme)
+			if tt.du != nil {
+				clientBuilder = clientBuilder.WithObjects(tt.du)
+			}
+			if tt.vs != nil && tt.getVSErr == nil {
+				clientBuilder = clientBuilder.WithObjects(tt.vs)
+			}
+			if tt.pvc != nil && tt.getPVCErr == nil {
+				clientBuilder = clientBuilder.WithObjects(tt.pvc)
+			}
+			if tt.pv != nil && tt.getPVErr == nil {
+				clientBuilder = clientBuilder.WithObjects(tt.pv)
+			}
+
+			fakeClient := &FakeClient{
+				Client:      clientBuilder.Build(),
+				getErrorMap: make(map[string]error),
+			}
+
+			// Set specific errors for specific object types
+			if tt.getVSErr != nil {
+				fakeClient.getErrorMap["*volumesnapshotv1.VolumeSnapshot"] = tt.getVSErr
+			}
+			if tt.getPVCErr != nil {
+				fakeClient.getErrorMap["*corev1.PersistentVolumeClaim"] = tt.getPVCErr
+			}
+			if tt.getPVErr != nil {
+				fakeClient.getErrorMap["*corev1.PersistentVolume"] = tt.getPVErr
+			}
+
+			reconciler, err := initDataUploaderReconcilerWithError()
+			require.NoError(t, err)
+			reconciler.client = fakeClient
+
+			ctx := context.Background()
+			err = reconciler.updateDataUploadStatus(ctx, tt.du)
+
+			if tt.expectedErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErrMsg)
+			} else {
+				require.NoError(t, err)
+				// Verify the DataUpload status was updated with correct CBT
+				updated := &velerov2alpha1api.DataUpload{}
+				require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{
+					Namespace: tt.du.Namespace,
+					Name:      tt.du.Name,
+				}, updated))
+				assert.NotNil(t, updated.Status.CBT)
+				assert.Equal(t, tt.expectedCBT.ChangeID, updated.Status.CBT.ChangeID)
+				assert.Equal(t, tt.expectedCBT.VolumeID, updated.Status.CBT.VolumeID)
+			}
 		})
 	}
 }

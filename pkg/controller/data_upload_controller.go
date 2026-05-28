@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	snapshotv1api "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
 	snapshotter "github.com/kubernetes-csi/external-snapshotter/client/v8/clientset/versioned/typed/volumesnapshot/v1"
 	"github.com/sirupsen/logrus"
 	corev1api "k8s.io/api/core/v1"
@@ -256,7 +257,8 @@ func (r *DataUploadReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return r.errorOut(ctx, du, errors.Errorf("%s type of snapshot exposer is not exist", du.Spec.SnapshotType), "not exist type of exposer", log)
 	}
 
-	if du.Status.Phase == "" || du.Status.Phase == velerov2alpha1api.DataUploadPhaseNew {
+	switch du.Status.Phase {
+	case "", velerov2alpha1api.DataUploadPhaseNew:
 		if du.Spec.Cancel {
 			log.Debugf("Data upload is canceled in Phase %s", du.Status.Phase)
 
@@ -298,8 +300,13 @@ func (r *DataUploadReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 		log.Info("Snapshot is exposed")
 
+		if err := r.updateDataUploadStatus(ctx, du); err != nil {
+			return ctrl.Result{}, errors.Wrapf(err, "error updating the data upload %s status", du.Name)
+		}
+
 		return ctrl.Result{}, nil
-	} else if du.Status.Phase == velerov2alpha1api.DataUploadPhaseAccepted {
+
+	case velerov2alpha1api.DataUploadPhaseAccepted:
 		if peekErr := ep.PeekExposed(ctx, getOwnerObject(du)); peekErr != nil {
 			log.Errorf("Cancel du %s/%s because of expose error %s", du.Namespace, du.Name, peekErr)
 
@@ -316,7 +323,8 @@ func (r *DataUploadReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		return ctrl.Result{}, nil
-	} else if du.Status.Phase == velerov2alpha1api.DataUploadPhasePrepared {
+
+	case velerov2alpha1api.DataUploadPhasePrepared:
 		log.Infof("Data upload is prepared and should be processed by %s (%s)", du.Status.Node, r.nodeName)
 
 		if du.Status.Node != r.nodeName {
@@ -412,7 +420,8 @@ func (r *DataUploadReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		return ctrl.Result{}, nil
-	} else if du.Status.Phase == velerov2alpha1api.DataUploadPhaseInProgress {
+
+	case velerov2alpha1api.DataUploadPhaseInProgress:
 		if du.Spec.Cancel {
 			if du.Status.Node != r.nodeName {
 				return ctrl.Result{}, nil
@@ -448,6 +457,56 @@ func (r *DataUploadReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return ctrl.Result{}, nil
 }
 
+func (r *DataUploadReconciler) updateDataUploadStatus(ctx context.Context, du *velerov2alpha1api.DataUpload) error {
+	vs := &snapshotv1api.VolumeSnapshot{}
+	if du.Spec.CSISnapshot == nil {
+		return fmt.Errorf("DU %s csi snapshot is nil", du.Namespace+"/"+du.Name)
+	}
+
+	err := r.client.Get(ctx, types.NamespacedName{Namespace: du.Spec.SourceNamespace, Name: du.Spec.CSISnapshot.VolumeSnapshot}, vs)
+	if err != nil {
+		return fmt.Errorf("error getting volume snapshot %s for du %s: %w", du.Spec.SourceNamespace+"/"+du.Spec.CSISnapshot.VolumeSnapshot, du.Namespace+"/"+du.Name, err)
+	}
+
+	cbtStatus := &velerov2alpha1api.CBTStatus{}
+
+	if vs.Annotations != nil &&
+		vs.Annotations[util.VSphereCNSChangeIDAnno] != "" &&
+		vs.Annotations[util.VSphereCNSSnapshotAnno] != "" {
+		cbtStatus.ChangeID = vs.Annotations[util.VSphereCNSChangeIDAnno]
+		cbtStatus.VolumeID = strings.Split(vs.Annotations[util.VSphereCNSSnapshotAnno], "+")[0]
+	} else {
+		pvc := &corev1api.PersistentVolumeClaim{}
+		if err := r.client.Get(ctx, types.NamespacedName{Namespace: du.Spec.SourceNamespace, Name: du.Spec.SourcePVC}, pvc); err != nil {
+			return fmt.Errorf("failed to get pvc %s/%s for du %s: %v", du.Spec.SourceNamespace, du.Spec.SourcePVC, du.Namespace+"/"+du.Name, err)
+		}
+
+		pv := &corev1api.PersistentVolume{}
+		if err := r.client.Get(ctx, types.NamespacedName{Name: pvc.Spec.VolumeName}, pv); err != nil {
+			return fmt.Errorf("failed to get pv %s for du %s: %v", pvc.Spec.VolumeName, du.Namespace+"/"+du.Name, err)
+		}
+
+		cbtStatus.ChangeID = vs.Name
+		cbtStatus.VolumeID = pv.Spec.CSI.VolumeHandle
+	}
+
+	UpdateDataUploadWithRetry(
+		ctx,
+		r.client,
+		types.NamespacedName{Namespace: du.Namespace, Name: du.Name},
+		r.logger,
+		func(du *velerov2alpha1api.DataUpload) bool {
+			if cbtStatus != nil {
+				du.Status.CBT = cbtStatus
+			}
+
+			return true
+		},
+	)
+
+	return nil
+}
+
 func (r *DataUploadReconciler) initCancelableDataPath(ctx context.Context, asyncBR datapath.AsyncBR, res *exposer.ExposeResult, log logrus.FieldLogger) error {
 	log.Info("Init cancelable dataUpload")
 
@@ -463,9 +522,13 @@ func (r *DataUploadReconciler) initCancelableDataPath(ctx context.Context, async
 func (r *DataUploadReconciler) startCancelableDataPath(asyncBR datapath.AsyncBR, du *velerov2alpha1api.DataUpload, res *exposer.ExposeResult, log logrus.FieldLogger) error {
 	log.Info("Start cancelable dataUpload")
 
-	if err := asyncBR.StartBackup(datapath.AccessPoint{
-		ByPath: res.ByPod.VolumeName,
-	}, du.Spec.DataMoverConfig, nil); err != nil {
+	if err := asyncBR.StartBackup(
+		datapath.AccessPoint{
+			ByPath: res.ByPod.VolumeName,
+		},
+		du.Spec.DataMoverConfig,
+		nil,
+	); err != nil {
 		return errors.Wrapf(err, "error starting async backup for pod %s, volume %s", res.ByPod.HostingPod.Name, res.ByPod.VolumeName)
 	}
 

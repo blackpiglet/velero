@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -34,6 +35,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/vmware-tanzu/velero/pkg/apis/velero/v2alpha1"
 	"github.com/vmware-tanzu/velero/pkg/datamover"
 	"github.com/vmware-tanzu/velero/pkg/nodeagent"
 	velerotypes "github.com/vmware-tanzu/velero/pkg/types"
@@ -256,6 +258,11 @@ func (e *csiSnapshotExposer) Expose(ctx context.Context, ownerObject corev1api.O
 
 	affinity := kube.GetLoadAffinityByStorageClass(csiExposeParam.Affinity, backupPVCStorageClass, curLog)
 
+	cbtInfo, err := e.getCBTInfo(ctx, volumeSnapshot, csiExposeParam.SourcePVName)
+	if err != nil {
+		return errors.Wrap(err, "error to get CBT info")
+	}
+
 	backupPod, err := e.createBackupPod(
 		ctx,
 		ownerObject,
@@ -273,6 +280,7 @@ func (e *csiSnapshotExposer) Expose(ctx context.Context, ownerObject corev1api.O
 		intoleratableNodes,
 		volumeTopology,
 		csiExposeParam.SnapshotMetadataServiceConfigs,
+		&cbtInfo,
 	)
 	if err != nil {
 		return errors.Wrap(err, "error to create backup pod")
@@ -287,6 +295,27 @@ func (e *csiSnapshotExposer) Expose(ctx context.Context, ownerObject corev1api.O
 	}()
 
 	return nil
+}
+
+func (e *csiSnapshotExposer) getCBTInfo(ctx context.Context, vs *snapshotv1api.VolumeSnapshot, sourcePVName string) (v2alpha1.CBTStatus, error) {
+	cbtStatus := v2alpha1.CBTStatus{}
+
+	if vs.Annotations != nil &&
+		vs.Annotations[util.VSphereCNSChangeIDAnno] != "" &&
+		vs.Annotations[util.VSphereCNSSnapshotAnno] != "" {
+		cbtStatus.ChangeID = vs.Annotations[util.VSphereCNSChangeIDAnno]
+		cbtStatus.VolumeID = strings.Split(vs.Annotations[util.VSphereCNSSnapshotAnno], "+")[0]
+	} else {
+		pv, err := e.kubeClient.CoreV1().PersistentVolumes().Get(ctx, sourcePVName, metav1.GetOptions{})
+		if err != nil {
+			return cbtStatus, fmt.Errorf("failed to get pv %s: %w", sourcePVName, err)
+		}
+
+		cbtStatus.ChangeID = vs.Name
+		cbtStatus.VolumeID = pv.Spec.CSI.VolumeHandle
+	}
+
+	return cbtStatus, nil
 }
 
 func (e *csiSnapshotExposer) GetExposed(ctx context.Context, ownerObject corev1api.ObjectReference, timeout time.Duration, param any) (*ExposeResult, error) {
@@ -618,6 +647,7 @@ func (e *csiSnapshotExposer) createBackupPod(
 	intoleratableNodes []string,
 	volumeTopology *corev1api.NodeSelector,
 	csiSnapshotMetadataServiceConfigs *velerotypes.CSISnapshotMetadataService,
+	cbtInfo *v2alpha1.CBTStatus,
 ) (*corev1api.Pod, error) {
 	podName := ownerObject.Name
 
@@ -668,6 +698,11 @@ func (e *csiSnapshotExposer) createBackupPod(
 		fmt.Sprintf("--volume-mode=%s", volumeMode),
 		fmt.Sprintf("--data-upload=%s", ownerObject.Name),
 		fmt.Sprintf("--resource-timeout=%s", operationTimeout.String()),
+	}
+
+	if cbtInfo != nil {
+		args = append(args, fmt.Sprintf("--cbt-change-id=%s", cbtInfo.ChangeID))
+		args = append(args, fmt.Sprintf("--cbt-volume-id=%s", cbtInfo.VolumeID))
 	}
 
 	args = append(args, podInfo.logFormatArgs...)

@@ -83,6 +83,13 @@ spec:
                   BackupStorageLocation is the name of the backup storage location
                   where the backup repository is stored.
                 type: string
+              backupType:
+                description: BackupType specifies the backup type of the DataUpload
+                  for, including full or incremental.
+                enum:
+                - Full
+                - Incremental
+                type: string
               cancel:
                 description: |-
                   Cancel indicates request to cancel the ongoing DataUpload. It can be set
@@ -166,6 +173,23 @@ spec:
                 format: date-time
                 nullable: true
                 type: string
+              cbtStatus:
+                description: CBTStatus is the CBT information for the snapshot.
+                nullable: true
+                properties:
+                  changeID:
+                    description: |-
+                      For Vanilla k8s, changeID is same as the backupVSC snapshot handle.
+                      For VCF k8s service workload cluster,
+                      changeID is read from the annotation "csi.vsphere.volume/change-id" of the VS.
+                    type: string
+                  volumeID:
+                    description: |-
+                      For Vanilla k8s, volumeID is same as the PV's volume handle.
+                      For VCF k8s service workload cluster,
+                      volumeID is read from the annotation "csi.vsphere.volume/snapshot" of the VS.
+                    type: string
+                type: object
               completionTimestamp:
                 description: |-
                   CompletionTimestamp records the time a backup was completed.

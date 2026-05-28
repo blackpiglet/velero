@@ -17,6 +17,7 @@ limitations under the License.
 package exposer
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"testing"
@@ -38,6 +39,7 @@ import (
 	clientFake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	"github.com/vmware-tanzu/velero/pkg/apis/velero/v2alpha1"
 	velerotest "github.com/vmware-tanzu/velero/pkg/test"
 	velerotypes "github.com/vmware-tanzu/velero/pkg/types"
 	"github.com/vmware-tanzu/velero/pkg/util"
@@ -1991,6 +1993,98 @@ end diagnose CSI exposer`,
 
 			diag := e.DiagnoseExpose(t.Context(), ownerObject)
 			assert.Equal(t, tt.expected, diag)
+		})
+	}
+}
+
+func TestGetCBTInfo(t *testing.T) {
+	tests := []struct {
+		name         string
+		vs           *snapshotv1api.VolumeSnapshot
+		sourcePVName string
+		existingPVs  []*corev1api.PersistentVolume
+		expectedInfo v2alpha1.CBTStatus
+		expectErr    bool
+	}{
+		{
+			name: "VolumeSnapshot with vSphere CBT annotations",
+			vs: &snapshotv1api.VolumeSnapshot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vs-1",
+					Annotations: map[string]string{
+						util.VSphereCNSChangeIDAnno: "change-id-12345",
+						util.VSphereCNSSnapshotAnno: "vol-id-67890+extra-info",
+					},
+				},
+			},
+			sourcePVName: "pv-1",
+			expectedInfo: v2alpha1.CBTStatus{
+				ChangeID: "change-id-12345",
+				VolumeID: "vol-id-67890",
+			},
+			expectErr: false,
+		},
+		{
+			name: "No annotations, target PV exists",
+			vs: &snapshotv1api.VolumeSnapshot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vs-2",
+				},
+			},
+			sourcePVName: "pv-2",
+			existingPVs: []*corev1api.PersistentVolume{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "pv-2",
+					},
+					Spec: corev1api.PersistentVolumeSpec{
+						PersistentVolumeSource: corev1api.PersistentVolumeSource{
+							CSI: &corev1api.CSIPersistentVolumeSource{
+								VolumeHandle: "csi-volume-handle-xyz",
+							},
+						},
+					},
+				},
+			},
+			expectedInfo: v2alpha1.CBTStatus{
+				ChangeID: "vs-2",
+				VolumeID: "csi-volume-handle-xyz",
+			},
+			expectErr: false,
+		},
+		{
+			name: "No annotations, but PV does not exist causing error",
+			vs: &snapshotv1api.VolumeSnapshot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "vs-3",
+				},
+			},
+			sourcePVName: "pv-3",
+			existingPVs:  nil,
+			expectErr:    true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeKubeClient := fake.NewSimpleClientset()
+			for _, pv := range tc.existingPVs {
+				_, err := fakeKubeClient.CoreV1().PersistentVolumes().Create(context.TODO(), pv, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			exposer := &csiSnapshotExposer{
+				kubeClient: fakeKubeClient,
+			}
+
+			cbtInfo, err := exposer.getCBTInfo(context.TODO(), tc.vs, tc.sourcePVName)
+
+			if tc.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedInfo, cbtInfo)
+			}
 		})
 	}
 }

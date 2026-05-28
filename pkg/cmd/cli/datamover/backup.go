@@ -58,6 +58,8 @@ type dataMoverBackupConfig struct {
 	duName          string
 	resourceTimeout time.Duration
 	cbtSAName       string
+	cbtChangeID     string
+	cbtVolumeID     string
 }
 
 func NewBackupCommand(f client.Factory) *cobra.Command {
@@ -79,7 +81,7 @@ func NewBackupCommand(f client.Factory) *cobra.Command {
 			logger.Infof("Starting Velero data-mover backup %s (%s)", buildinfo.Version, buildinfo.FormattedGitSHA())
 
 			f.SetBasename(fmt.Sprintf("%s-%s", c.Parent().Name(), c.Name()))
-			s, err := newdataMoverBackup(logger, f, config)
+			s, err := newDataMoverBackup(logger, f, config)
 			if err != nil {
 				kube.ExitPodWithMessage(logger, false, "Failed to create data mover backup, %v", err)
 			}
@@ -95,6 +97,8 @@ func NewBackupCommand(f client.Factory) *cobra.Command {
 	command.Flags().StringVar(&config.duName, "data-upload", config.duName, "The data upload name")
 	command.Flags().DurationVar(&config.resourceTimeout, "resource-timeout", config.resourceTimeout, "How long to wait for resource processes which are not covered by other specific timeout parameters.")
 	command.Flags().StringVar(&config.cbtSAName, "cbt-sa-name", config.cbtSAName, "The name of the service account used by CSI's CBT service")
+	command.Flags().StringVar(&config.cbtChangeID, "cbt-change-id", config.cbtChangeID, "The change ID of the CBT snapshot")
+	command.Flags().StringVar(&config.cbtVolumeID, "cbt-volume-id", config.cbtVolumeID, "The volume ID of the CBT snapshot")
 
 	_ = command.MarkFlagRequired("volume-path")
 	_ = command.MarkFlagRequired("volume-mode")
@@ -118,7 +122,7 @@ type dataMoverBackup struct {
 	cbtService  cbtservice.Service
 }
 
-func newdataMoverBackup(logger logrus.FieldLogger, factory client.Factory, config dataMoverBackupConfig) (*dataMoverBackup, error) {
+func newDataMoverBackup(logger logrus.FieldLogger, factory client.Factory, config dataMoverBackupConfig) (*dataMoverBackup, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	clientConfig, err := factory.ClientConfig()
@@ -303,8 +307,23 @@ func (s *dataMoverBackup) createDataPathService() (dataPathService, error) {
 
 	repoEnsurer := repository.NewEnsurer(s.client, s.logger, s.config.resourceTimeout)
 
-	return datamover.NewBackupMicroService(s.ctx, s.client, s.kubeClient, s.config.duName, s.namespace, s.nodeName, datapath.AccessPoint{
-		ByPath:  s.config.volumePath,
-		VolMode: uploader.PersistentVolumeMode(s.config.volumeMode),
-	}, s.dataPathMgr, repoEnsurer, credGetter, duInformer, s.logger), nil
+	return datamover.NewBackupMicroService(
+		s.ctx,
+		s.client,
+		s.kubeClient,
+		s.config.duName,
+		s.namespace,
+		s.nodeName,
+		datapath.AccessPoint{
+			ByPath:  s.config.volumePath,
+			VolMode: uploader.PersistentVolumeMode(s.config.volumeMode),
+		},
+		s.dataPathMgr,
+		repoEnsurer,
+		credGetter,
+		duInformer,
+		s.config.cbtChangeID,
+		s.config.cbtVolumeID,
+		s.logger,
+	), nil
 }

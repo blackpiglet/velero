@@ -64,6 +64,9 @@ type DataUploadSpec struct {
 	// SourceFSType is the file system type of the source volume.
 	// +optional
 	SourceFSType string `json:"sourceFSType,omitempty"`
+
+	// BackupType specifies the backup type of the DataUpload for, including full or incremental.
+	BackupType BackupType `json:"backupType,omitempty"`
 }
 
 type SnapshotType string
@@ -71,6 +74,20 @@ type SnapshotType string
 const (
 	SnapshotTypeCSI SnapshotType = "CSI"
 )
+
+type CBTStatus struct {
+	// For Vanilla k8s, changeID is same as the backupVSC snapshot handle.
+	// For VCF k8s service workload cluster,
+	// changeID is read from the annotation "csi.vsphere.volume/change-id" of the VS.
+	// +optional
+	ChangeID string `json:"changeID"`
+
+	// For Vanilla k8s, volumeID is same as the PV's volume handle.
+	// For VCF k8s service workload cluster,
+	// volumeID is read from the annotation "csi.vsphere.volume/snapshot" of the VS.
+	// +optional
+	VolumeID string `json:"volumeID"`
+}
 
 // CSISnapshotSpec is the specification for a CSI snapshot.
 type CSISnapshotSpec struct {
@@ -88,6 +105,15 @@ type CSISnapshotSpec struct {
 	// +optional
 	Driver string `json:"driver,omitempty"`
 }
+
+// BackupType represents the backup type of a DataUpload, including full or incremental.
+// +kubebuilder:validation:Enum=Full;Incremental
+type BackupType string
+
+const (
+	BackupTypeFull        BackupType = "Full"
+	BackupTypeIncremental BackupType = "Incremental"
+)
 
 // DataUploadPhase represents the lifecycle phase of a DataUpload.
 // +kubebuilder:validation:Enum=New;Accepted;Prepared;InProgress;Canceling;Canceled;Completed;Failed
@@ -180,6 +206,11 @@ type DataUploadStatus struct {
 	// +optional
 	// +nullable
 	AcceptedTimestamp *metav1.Time `json:"acceptedTimestamp,omitempty"`
+
+	// CBTStatus is the CBT information for the snapshot.
+	// +optional
+	// +nullable
+	CBT *CBTStatus `json:"cbtStatus,omitempty"`
 }
 
 // TODO(2.0) After converting all resources to use the runttime-controller client,
