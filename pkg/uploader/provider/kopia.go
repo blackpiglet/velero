@@ -120,7 +120,8 @@ func (kp *kopiaProvider) RunBackup(
 	_ CBTParam,
 	volMode uploader.PersistentVolumeMode,
 	uploaderCfg map[string]string,
-	updater uploader.ProgressUpdater) (string, bool, int64, int64, error) {
+	updater uploader.ProgressUpdater,
+) (string, bool, int64, int64, error) {
 	if updater == nil {
 		return "", false, 0, 0, errors.New("Need to initial backup progress updater first")
 	}

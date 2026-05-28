@@ -463,9 +463,13 @@ func (r *DataUploadReconciler) initCancelableDataPath(ctx context.Context, async
 func (r *DataUploadReconciler) startCancelableDataPath(asyncBR datapath.AsyncBR, du *velerov2alpha1api.DataUpload, res *exposer.ExposeResult, log logrus.FieldLogger) error {
 	log.Info("Start cancelable dataUpload")
 
-	if err := asyncBR.StartBackup(datapath.AccessPoint{
-		ByPath: res.ByPod.VolumeName,
-	}, du.Spec.DataMoverConfig, nil); err != nil {
+	if err := asyncBR.StartBackup(
+		datapath.AccessPoint{
+			ByPath: res.ByPod.VolumeName,
+		},
+		du.Spec.DataMoverConfig,
+		nil,
+	); err != nil {
 		return errors.Wrapf(err, "error starting async backup for pod %s, volume %s", res.ByPod.HostingPod.Name, res.ByPod.VolumeName)
 	}
 
