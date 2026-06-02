@@ -636,6 +636,7 @@ func (kr *kopiaRepository) SaveSnapshot(ctx context.Context, snap udmrepo.Snapsh
 			GroupID:     snap.RootObject.GroupID,
 		},
 		Tags: snap.Tags,
+		Pins: []string{"velero-pin"},
 	}
 
 	id, err := snapshot.SaveSnapshot(ctx, kr.rawWriter, &manifest)
