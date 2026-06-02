@@ -159,7 +159,7 @@ func (r *DataUploadReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, errors.Wrap(err, "getting DataUpload")
 	}
 
-	if !datamover.IsBuiltInUploader(du.Spec.DataMover) {
+	if !datamover.IsBuiltInDataMover(du.Spec.DataMover) {
 		log.WithField("Data mover", du.Spec.DataMover).Debug("it is not one built-in data mover which is not supported by Velero")
 		return ctrl.Result{}, nil
 	}
@@ -939,7 +939,12 @@ func (r *DataUploadReconciler) setupExposeParam(du *velerov2alpha1api.DataUpload
 			return nil, errors.Wrapf(err, "failed to get source PV %s", pvc.Spec.VolumeName)
 		}
 
-		nodeOS := kube.GetPVCAttachingNodeOS(pvc, r.kubeClient.CoreV1(), r.kubeClient.StorageV1(), log)
+		nodeOS := ""
+		if du.Spec.DataMover == datamover.DataMoverTypeVeleroBlock {
+			nodeOS = kube.NodeOSLinux
+		} else {
+			nodeOS = kube.GetPVCAttachingNodeOS(pvc, r.kubeClient.CoreV1(), r.kubeClient.StorageV1(), log)
+		}
 
 		if err := kube.HasNodeWithOS(context.Background(), nodeOS, r.kubeClient.CoreV1()); err != nil {
 			return nil, errors.Wrapf(err, "no appropriate node to run data upload for PVC %s/%s", du.Spec.SourceNamespace, du.Spec.SourcePVC)
@@ -1013,6 +1018,7 @@ func (r *DataUploadReconciler) setupExposeParam(du *velerov2alpha1api.DataUpload
 			Resources:                      r.podResources,
 			NodeOS:                         nodeOS,
 			PriorityClassName:              r.dataMovePriorityClass,
+			DataMover:                      du.Spec.DataMover,
 			SnapshotMetadataServiceConfigs: r.snapshotMetadataServiceConfigs,
 		}, nil
 	}
