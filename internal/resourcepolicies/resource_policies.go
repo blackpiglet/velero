@@ -343,6 +343,8 @@ func getResourcePoliciesFromConfig(cm *corev1api.ConfigMap) (*Policies, error) {
 }
 
 func (p *Policies) validateNamespacedFilterPolicies() error {
+	seenPatterns := make(map[string][]int) // pattern -> list of policy indices
+
 	// Rule 1-7: Basic validation rules
 	for i, nfp := range p.namespacedFilterPolicies {
 		if len(nfp.Namespaces) == 0 {
@@ -350,6 +352,14 @@ func (p *Policies) validateNamespacedFilterPolicies() error {
 		}
 		if len(nfp.ResourceFilters) == 0 {
 			return fmt.Errorf("namespacedFilterPolicies[%d]: at least one resourceFilter must be specified", i)
+		}
+
+		// Rule 8 & 9: Validate glob patterns and collect namespace patterns for duplicate check
+		for j, pattern := range nfp.Namespaces {
+			if err := wildcard.ValidateNamespaceName(pattern); err != nil {
+				return fmt.Errorf("namespacedFilterPolicies[%d].namespaces[%d]: %w", i, j, err)
+			}
+			seenPatterns[pattern] = append(seenPatterns[pattern], i)
 		}
 
 		seenKinds := make(map[string]int)
@@ -393,29 +403,7 @@ func (p *Policies) validateNamespacedFilterPolicies() error {
 		}
 	}
 
-	// Rule 8: Validate no duplicate namespace patterns across filter policies
-	if err := p.validateNoDuplicateNamespacePatterns(); err != nil {
-		return err
-	}
-
-	// Rule 9: Validate glob patterns for namespace names
-	if err := p.validateGlobPatterns(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (p *Policies) validateNoDuplicateNamespacePatterns() error {
-	seenPatterns := make(map[string][]int) // pattern -> list of policy indices
-
-	for i, policy := range p.namespacedFilterPolicies {
-		for _, pattern := range policy.Namespaces {
-			seenPatterns[pattern] = append(seenPatterns[pattern], i)
-		}
-	}
-
-	// Report exact duplicates only
+	// Rule 8: Report exact duplicates only
 	for pattern, policyIndices := range seenPatterns {
 		if len(policyIndices) > 1 {
 			return fmt.Errorf(
@@ -423,19 +411,6 @@ func (p *Policies) validateNoDuplicateNamespacePatterns() error {
 				pattern, policyIndices)
 		}
 	}
-	return nil
-}
 
-func (p *Policies) validateGlobPatterns() error {
-	for i, policy := range p.namespacedFilterPolicies {
-		for j, pattern := range policy.Namespaces {
-			// Use existing Velero wildcard validation for namespace patterns
-			if err := wildcard.ValidateNamespaceName(pattern); err != nil {
-				return fmt.Errorf(
-					"namespacedFilterPolicies[%d].namespaces[%d]: %w",
-					i, j, err)
-			}
-		}
-	}
 	return nil
 }
