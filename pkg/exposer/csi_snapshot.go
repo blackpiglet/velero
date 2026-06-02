@@ -98,6 +98,9 @@ type CSISnapshotExposeParam struct {
 
 	// DataMover is the data mover type, e.g., velero-fs, velero-block
 	DataMover string
+
+	// SnapshotMetadataServiceConfigs is the config for CSI snapshot metadata service
+	SnapshotMetadataServiceConfigs *velerotypes.CSISnapshotMetadataService
 }
 
 // CSISnapshotExposeWaitParam define the input param for WaitExposed of CSI snapshots
@@ -269,6 +272,7 @@ func (e *csiSnapshotExposer) Expose(ctx context.Context, ownerObject corev1api.O
 		csiExposeParam.PriorityClassName,
 		intoleratableNodes,
 		volumeTopology,
+		csiExposeParam.SnapshotMetadataServiceConfigs,
 	)
 	if err != nil {
 		return errors.Wrap(err, "error to create backup pod")
@@ -613,6 +617,7 @@ func (e *csiSnapshotExposer) createBackupPod(
 	priorityClassName string,
 	intoleratableNodes []string,
 	volumeTopology *corev1api.NodeSelector,
+	csiSnapshotMetadataServiceConfigs *velerotypes.CSISnapshotMetadataService,
 ) (*corev1api.Pod, error) {
 	podName := ownerObject.Name
 
@@ -667,6 +672,12 @@ func (e *csiSnapshotExposer) createBackupPod(
 
 	args = append(args, podInfo.logFormatArgs...)
 	args = append(args, podInfo.logLevelArgs...)
+
+	if csiSnapshotMetadataServiceConfigs != nil {
+		if csiSnapshotMetadataServiceConfigs.SAName != "" {
+			args = append(args, fmt.Sprintf("--csi-snapshot-metadata-service-sa=%s", csiSnapshotMetadataServiceConfigs.SAName))
+		}
+	}
 
 	if affinity == nil {
 		affinity = &kube.LoadAffinity{}
