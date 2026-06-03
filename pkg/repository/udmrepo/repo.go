@@ -98,6 +98,7 @@ type Snapshot struct {
 	StartTime   time.Time
 	EndTime     time.Time
 	Tags        map[string]string
+	TotalSize   int64
 	RootObject  ObjectMetadata
 }
 
