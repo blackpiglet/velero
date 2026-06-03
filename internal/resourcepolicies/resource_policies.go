@@ -261,8 +261,11 @@ func (p *Policies) Validate() error {
 		}
 	}
 
-	if err := p.validateNamespacedFilterPolicies(); err != nil {
 	if err := p.validateClusterScopedFilterPolicy(); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := p.validateNamespacedFilterPolicies(); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -410,13 +413,19 @@ func (p *Policies) validateNamespacedFilterPolicies() error {
 			return fmt.Errorf(
 				"namespacedFilterPolicies: duplicate namespace pattern '%s' found in policies %v",
 				pattern, policyIndices)
+		}
+	}
+
+	return nil
+}
+
 func (p *Policies) validateClusterScopedFilterPolicy() error {
 	if p.clusterScopedFilterPolicy == nil {
 		return nil
 	}
 
 	if len(p.clusterScopedFilterPolicy.ResourceFilters) == 0 {
-		return fmt.Errorf("clusterScopedFilterPolicy: at least one resourceFilter must be specified")
+		return fmt.Errorf("clusterScopedFilterPolicy: resourceFilters cannot be empty; remove the policy block entirely if it is not needed")
 	}
 
 	seenKinds := make(map[string]int)
