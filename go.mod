@@ -29,13 +29,13 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/kopia/kopia v0.16.0
 	github.com/kubernetes-csi/external-snapshotter/client/v8 v8.4.0
+	github.com/netresearch/go-cron v0.15.0
 	github.com/onsi/ginkgo/v2 v2.28.3
 	github.com/onsi/gomega v1.40.0
 	github.com/petar/GoLLRB v0.0.0-20210522233825-ae3b015fd3e9
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
-	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/cobra v1.10.2

@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	cron "github.com/netresearch/go-cron"
 	"github.com/pkg/errors"
-	cron "github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
