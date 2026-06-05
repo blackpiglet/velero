@@ -1507,10 +1507,9 @@ func resolveNamespacedFilterPolicies(
 		}
 
 		if nsFilter == nil {
-			nsFilter = &ResolvedNamespaceFilter{ResourceFilterMap: rfMap}
-		} else {
-			nsFilter.ResourceFilterMap = rfMap
+			nsFilter = &ResolvedNamespaceFilter{}
 		}
+		nsFilter.ResourceFilterMap = rfMap
 		for _, nsPattern := range policy.Namespaces {
 			result[nsPattern] = nsFilter
 			// Pre-compile glob patterns once here; exact names are matched via map
