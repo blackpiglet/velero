@@ -1536,3 +1536,147 @@ namespacedFilterPolicies:
 	assert.Equal(t, []string{"team-*", "another-pattern"}, policy2.Namespaces)
 	assert.Equal(t, []string{"Deployment", "Service"}, policy2.ResourceFilters[0].Kinds)
 }
+
+func TestClusterScopedFilterPolicies(t *testing.T) {
+	testCases := []struct {
+		name     string
+		yamlData string
+		wantErr  bool
+		errMsg   string
+	}{
+		{
+			name: "valid - single kind with names",
+			yamlData: `version: v1
+clusterScopedFilterPolicy:
+  resourceFilters:
+  - kinds: ["ClusterRole"]
+    names: ["my-app-*"]`,
+			wantErr: false,
+		},
+		{
+			name: "valid - multi-kind with labelSelector",
+			yamlData: `version: v1
+clusterScopedFilterPolicy:
+  resourceFilters:
+  - kinds: ["ClusterRole", "ClusterRoleBinding"]
+    labelSelector:
+      app: my-app`,
+			wantErr: false,
+		},
+		{
+			name: "valid - orLabelSelectors",
+			yamlData: `version: v1
+clusterScopedFilterPolicy:
+  resourceFilters:
+  - kinds: ["CustomResourceDefinition"]
+    orLabelSelectors:
+    - app: my-app
+    - app: other-app`,
+			wantErr: false,
+		},
+		{
+			name: "valid - excludedNames",
+			yamlData: `version: v1
+clusterScopedFilterPolicy:
+  resourceFilters:
+  - kinds: ["ClusterRole"]
+    names: ["my-*"]
+    excludedNames: ["my-debug-*"]`,
+			wantErr: false,
+		},
+		{
+			name: "invalid - empty resourceFilters",
+			yamlData: `version: v1
+clusterScopedFilterPolicy:
+  resourceFilters: []`,
+			wantErr: true,
+			errMsg:  "resourceFilters cannot be empty; remove the policy block entirely if it is not needed",
+		},
+		{
+			name: "invalid - empty kinds in clusterScopedFilterPolicy",
+			yamlData: `version: v1
+clusterScopedFilterPolicy:
+  resourceFilters:
+  - kinds: []
+    names: ["my-app-*"]`,
+			wantErr: true,
+			errMsg:  "kinds must be specified",
+		},
+		{
+			name: "invalid - asterisk kinds (explicit catch-all) in clusterScopedFilterPolicy",
+			yamlData: `version: v1
+clusterScopedFilterPolicy:
+  resourceFilters:
+  - kinds: ["*"]
+    labelSelector:
+      app: my-app`,
+			wantErr: true,
+			errMsg:  "kinds must be specified",
+		},
+		{
+			name: "invalid - duplicate kinds across entries",
+			yamlData: `version: v1
+clusterScopedFilterPolicy:
+  resourceFilters:
+  - kinds: ["ClusterRole"]
+    names: ["my-app-*"]
+  - kinds: ["ClusterRole"]
+    labelSelector:
+      app: other`,
+			wantErr: true,
+			errMsg:  `kind "ClusterRole" appears in both`,
+		},
+		{
+			name: "invalid - labelSelector and orLabelSelectors co-exist",
+			yamlData: `version: v1
+clusterScopedFilterPolicy:
+  resourceFilters:
+  - kinds: ["ClusterRole"]
+    labelSelector:
+      app: my-app
+    orLabelSelectors:
+    - app: other`,
+			wantErr: true,
+			errMsg:  "labelSelector and orLabelSelectors cannot co-exist",
+		},
+		{
+			name: "invalid - bad glob in names",
+			yamlData: `version: v1
+clusterScopedFilterPolicy:
+  resourceFilters:
+  - kinds: ["ClusterRole"]
+    names: ["[invalid"]`,
+			wantErr: true,
+			errMsg:  "invalid glob pattern",
+		},
+		{
+			name: "invalid - bad glob in excludedNames",
+			yamlData: `version: v1
+clusterScopedFilterPolicy:
+  resourceFilters:
+  - kinds: ["ClusterRole"]
+    excludedNames: ["[bad"]`,
+			wantErr: true,
+			errMsg:  "invalid glob pattern",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resPolicies, err := unmarshalResourcePolicies(&tc.yamlData)
+			require.NoError(t, err)
+
+			policies := &Policies{}
+			err = policies.BuildPolicy(resPolicies)
+			require.NoError(t, err)
+
+			err = policies.Validate()
+			if tc.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.errMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
