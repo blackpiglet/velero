@@ -22,7 +22,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"go.yaml.in/yaml/v3"
 	corev1api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

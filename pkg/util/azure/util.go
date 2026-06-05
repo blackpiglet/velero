@@ -29,7 +29,8 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
+
 	"github.com/vmware-tanzu/velero/pkg/util/dotenv"
 )
 
