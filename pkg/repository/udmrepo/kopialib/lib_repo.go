@@ -92,7 +92,6 @@ type kopiaObjectWriterEx struct {
 	description      string
 	compressor       compression.Name
 	splitter         string
-	zeroBuffer       []byte
 	zeroObject       object.ID
 	writeLock        sync.Mutex
 	asyncWritesSem   chan struct{}
@@ -1045,6 +1044,11 @@ func (kow *kopiaObjectWriterEx) WriteAt(p []byte, offset int64) (int, error) {
 
 			for i := startEntry; i < endEntry; i++ {
 				e := kow.parentEntries[i]
+
+				if e.Start != int64(i)*kow.blockSize {
+					return 0, errors.Errorf("parent entry %v start %v does not match expected start %v", i, e.Start, int64(i)*kow.blockSize)
+				}
+
 				if e.Length != kow.blockSize {
 					return 0, errors.Errorf("parent entry %v length %v does not match child block size %v", i, e.Length, kow.blockSize)
 				}
@@ -1069,7 +1073,7 @@ func (kow *kopiaObjectWriterEx) WriteAt(p []byte, offset int64) (int, error) {
 
 		objName := fmt.Sprintf("%s-b%v", kow.description, entryID)
 		if err := kow.writeZeroObject(objName, entryID); err != nil {
-			return 0, errors.Wrapf(err, "error writting zero object for %s", objName)
+			return 0, errors.Wrapf(err, "error writing zero object for %s", objName)
 		}
 
 		curPos += kow.blockSize
