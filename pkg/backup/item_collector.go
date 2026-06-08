@@ -538,46 +538,54 @@ func (r *itemCollector) listResourceByLabelsPerNamespace(
 		return nil, err
 	}
 
-	// Determine label selectors — per-namespace/per-kind or global
+	// 1. Start with global selectors (existing default behavior)
 	var orLabelSelectors []string
 	var labelSelector string
 
+	if r.backupRequest.Spec.OrLabelSelectors != nil {
+		for _, s := range r.backupRequest.Spec.OrLabelSelectors {
+			orLabelSelectors = append(orLabelSelectors, metav1.FormatLabelSelector(s))
+		}
+	}
+	if selector := r.backupRequest.Spec.LabelSelector; selector != nil {
+		labelSelector = metav1.FormatLabelSelector(selector)
+	}
+
+	// 2. Apply fine-grained filter overrides if applicable
 	if !resource.Namespaced && r.backupRequest.ClusterScopedFilterMap != nil {
-		rf := r.backupRequest.ClusterScopedFilterMap[gr.String()]
-		if rf != nil {
+		if rf := r.backupRequest.ClusterScopedFilterMap[gr.String()]; rf != nil {
+			// Overwrite global selectors with specific filter
+			orLabelSelectors = nil
+			labelSelector = ""
 			if rf.LabelSelector != nil {
 				labelSelector = rf.LabelSelector.String()
 			}
-			if len(rf.OrLabelSelectors) > 0 {
-				for _, s := range rf.OrLabelSelectors {
-					orLabelSelectors = append(orLabelSelectors, s.String())
-				}
+			for _, s := range rf.OrLabelSelectors {
+				orLabelSelectors = append(orLabelSelectors, s.String())
 			}
 		}
+		// ClusterScopedFilterPolicy: If rf == nil, it intentionally falls back to the global selectors initialized above
 	} else if nsFilter := r.backupRequest.GetNamespaceFilter(namespace); nsFilter != nil {
 		rf := nsFilter.ResourceFilterMap[gr.String()]
 		if rf == nil {
 			rf = nsFilter.CatchAllFilter
 		}
+
 		if rf != nil {
+			// Overwrite global selectors with specific filter
+			orLabelSelectors = nil
+			labelSelector = ""
 			if rf.LabelSelector != nil {
 				labelSelector = rf.LabelSelector.String()
 			}
-			if len(rf.OrLabelSelectors) > 0 {
-				for _, s := range rf.OrLabelSelectors {
-					orLabelSelectors = append(orLabelSelectors, s.String())
-				}
+			for _, s := range rf.OrLabelSelectors {
+				orLabelSelectors = append(orLabelSelectors, s.String())
 			}
-		}
-	} else {
-		// Use global selectors (existing behavior)
-		if r.backupRequest.Spec.OrLabelSelectors != nil {
-			for _, s := range r.backupRequest.Spec.OrLabelSelectors {
-				orLabelSelectors = append(orLabelSelectors, metav1.FormatLabelSelector(s))
-			}
-		}
-		if selector := r.backupRequest.Spec.LabelSelector; selector != nil {
-			labelSelector = metav1.FormatLabelSelector(selector)
+		} else {
+			// NamespacedFilterPolicies: namespacedFilterPolicies acts as an exclusive allowlist.
+			// If neither a kind-specific entry nor a catch-all entry exists, skip the kind.
+			logger.Debug("Skipping resource kind for namespace as it is not present in the namespace filter policy")
+			return nil, nil
 		}
 	}
 

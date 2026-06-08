@@ -30,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gobwas/glob"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -6047,4 +6048,74 @@ func TestBackupWithResPoliciesLogs(t *testing.T) {
 	backupReq.ResPolicies = pBadNs
 	err = h.backupper.Backup(h.log, backupReq, backupFile, nil, nil, nil)
 	require.Error(t, err)
+}
+
+func TestGetNamespaceFilter(t *testing.T) {
+	// Pre-compile our globs to simulate what resolveNamespacedFilterPolicies does
+	teamFrontendGlob, err := glob.Compile("team-frontend-*")
+	require.NoError(t, err)
+
+	teamGlob, err := glob.Compile("team-*")
+	require.NoError(t, err)
+
+	// Define our filter map
+	filterMap := map[string]*ResolvedNamespaceFilter{
+		"exact-match-ns":  {CatchAllFilter: &ResolvedResourceFilter{}},
+		"team-frontend-*": {CatchAllFilter: &ResolvedResourceFilter{}},
+		"team-*":          {CatchAllFilter: &ResolvedResourceFilter{}},
+	}
+
+	// Create request with patterns in a specific order (first-match semantics)
+	req := &Request{
+		NamespacedFilterMap: filterMap,
+		NamespacedFilterPatterns: []NamespacedFilterPattern{
+			{Pattern: "team-frontend-*", Compiled: teamFrontendGlob}, // Most specific first
+			{Pattern: "team-*", Compiled: teamGlob},                  // Broader second
+		},
+	}
+
+	tests := []struct {
+		name          string
+		namespace     string
+		expectNil     bool
+		expectMatched string // The pattern or exact string that should match
+	}{
+		{
+			name:          "exact string match bypasses glob matching",
+			namespace:     "exact-match-ns",
+			expectNil:     false,
+			expectMatched: "exact-match-ns",
+		},
+		{
+			name:          "reviewer requested: glob pattern matching",
+			namespace:     "team-backend-prod",
+			expectNil:     false,
+			expectMatched: "team-*",
+		},
+		{
+			name:          "reviewer requested: first-match ordering",
+			namespace:     "team-frontend-prod",
+			expectNil:     false,
+			expectMatched: "team-frontend-*", // Should match this because it's first in NamespacedFilterPatterns
+		},
+		{
+			name:      "no match returns nil",
+			namespace: "unrelated-ns",
+			expectNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := req.GetNamespaceFilter(tt.namespace)
+
+			if tt.expectNil {
+				assert.Nil(t, result)
+			} else {
+				assert.NotNil(t, result)
+				// Ensure the returned filter points to the correct reference in our map
+				assert.Same(t, filterMap[tt.expectMatched], result)
+			}
+		})
+	}
 }
