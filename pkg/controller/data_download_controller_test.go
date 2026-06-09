@@ -548,7 +548,7 @@ func TestDataDownloadReconcile(t *testing.T) {
 					r.restoreExposer = nil
 				} else {
 					r.restoreExposer = func() exposer.GenericRestoreExposer {
-						ep := exposermockes.NewMockGenericRestoreExposer(t)
+						ep := exposermockes.NewGenericRestoreExposer(t)
 						if test.isExposeErr {
 							ep.On("Expose", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("Error to expose restore exposer"))
 						} else if test.notNilExpose {
@@ -712,7 +712,7 @@ func TestOnDataDownloadCompleted(t *testing.T) {
 			needErrs := []bool{test.isGetErr, false, false, false}
 			r, err := initDataDownloadReconciler(t, nil, needErrs...)
 			r.restoreExposer = func() exposer.GenericRestoreExposer {
-				ep := exposermockes.NewMockGenericRestoreExposer(t)
+				ep := exposermockes.NewGenericRestoreExposer(t)
 				if test.rebindVolumeErr {
 					ep.On("RebindVolume", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("Error to rebind volume"))
 				} else {
@@ -1092,7 +1092,7 @@ func (dt *ddResumeTestHelper) DiagnoseExpose(context.Context, corev1api.ObjectRe
 	return ""
 }
 
-func (dt *ddResumeTestHelper) RebindVolume(context.Context, corev1api.ObjectReference, string, string, time.Duration) error {
+func (dt *ddResumeTestHelper) RebindVolume(context.Context, corev1api.ObjectReference, exposer.GenericRestoreRebindVolumeParam) error {
 	return nil
 }
 

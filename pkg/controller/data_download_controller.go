@@ -475,7 +475,11 @@ func (r *DataDownloadReconciler) OnDataDownloadCompleted(ctx context.Context, na
 	}
 
 	objRef := getDataDownloadOwnerObject(&dd)
-	err := r.restoreExposer.RebindVolume(ctx, objRef, dd.Spec.TargetVolume.PVC, dd.Spec.TargetVolume.Namespace, dd.Spec.OperationTimeout.Duration)
+	err := r.restoreExposer.RebindVolume(ctx, objRef, exposer.GenericRestoreRebindVolumeParam{
+		TargetPVCName:    dd.Spec.TargetVolume.PVC,
+		TargetNamespace:  dd.Spec.TargetVolume.Namespace,
+		OperationTimeout: dd.Spec.OperationTimeout.Duration,
+	})
 	if err != nil {
 		log.WithError(err).Error("Failed to rebind PV to target PVC on completion")
 		return

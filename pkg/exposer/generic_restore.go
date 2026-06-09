@@ -81,6 +81,18 @@ type GenericRestoreExposeParam struct {
 	CacheVolume *CacheConfigs
 }
 
+// GenericRestoreRebindVolumeParam define the input param for Generic Restore Rebind Volume
+type GenericRestoreRebindVolumeParam struct {
+	// TargetPVCName is the target volume name to be restored
+	TargetPVCName string
+
+	// TargetNamespace is the namespace of the volume to be restored
+	TargetNamespace string
+
+	// OperationTimeout specifies the time wait for resources operations in Expose
+	OperationTimeout time.Duration
+}
+
 // GenericRestoreExposer is the interfaces for a generic restore exposer
 type GenericRestoreExposer interface {
 	// Expose starts the process to a restore expose, the expose process may take long time
@@ -101,7 +113,7 @@ type GenericRestoreExposer interface {
 	DiagnoseExpose(context.Context, corev1api.ObjectReference) string
 
 	// RebindVolume unexposes the restored PV and rebind it to the target PVC
-	RebindVolume(context.Context, corev1api.ObjectReference, string, string, time.Duration) error
+	RebindVolume(context.Context, corev1api.ObjectReference, GenericRestoreRebindVolumeParam) error
 
 	// CleanUp cleans up any objects generated during the restore expose
 	CleanUp(context.Context, corev1api.ObjectReference)
@@ -379,22 +391,22 @@ func (e *genericRestoreExposer) CleanUp(ctx context.Context, ownerObject corev1a
 	kube.DeletePVAndPVCIfAny(ctx, e.kubeClient.CoreV1(), cachePVCName, ownerObject.Namespace, 0, e.log)
 }
 
-func (e *genericRestoreExposer) RebindVolume(ctx context.Context, ownerObject corev1api.ObjectReference, targetPVCName string, targetNamespace string, timeout time.Duration) error {
+func (e *genericRestoreExposer) RebindVolume(ctx context.Context, ownerObject corev1api.ObjectReference, param GenericRestoreRebindVolumeParam) error {
 	restorePodName := ownerObject.Name
 	restorePVCName := ownerObject.Name
 
 	curLog := e.log.WithFields(logrus.Fields{
 		"owner":            ownerObject.Name,
-		"target PVC":       targetPVCName,
-		"target namespace": targetNamespace,
+		"target PVC":       param.TargetPVCName,
+		"target namespace": param.TargetNamespace,
 	})
 
-	targetPVC, err := e.kubeClient.CoreV1().PersistentVolumeClaims(targetNamespace).Get(ctx, targetPVCName, metav1.GetOptions{})
+	targetPVC, err := e.kubeClient.CoreV1().PersistentVolumeClaims(param.TargetNamespace).Get(ctx, param.TargetPVCName, metav1.GetOptions{})
 	if err != nil {
-		return errors.Wrapf(err, "error to get target PVC %s/%s", targetNamespace, targetPVCName)
+		return errors.Wrapf(err, "error to get target PVC %s/%s", param.TargetNamespace, param.TargetPVCName)
 	}
 
-	restorePV, err := kube.WaitPVCBound(ctx, e.kubeClient.CoreV1(), e.kubeClient.CoreV1(), restorePVCName, ownerObject.Namespace, timeout)
+	restorePV, err := kube.WaitPVCBound(ctx, e.kubeClient.CoreV1(), e.kubeClient.CoreV1(), restorePVCName, ownerObject.Namespace, param.OperationTimeout)
 	if err != nil {
 		return errors.Wrapf(err, "error to get PV from restore PVC %s", restorePVCName)
 	}
@@ -421,12 +433,12 @@ func (e *genericRestoreExposer) RebindVolume(ctx context.Context, ownerObject co
 		restorePV = retained
 	}
 
-	err = kube.EnsureDeletePod(ctx, e.kubeClient.CoreV1(), restorePodName, ownerObject.Namespace, timeout)
+	err = kube.EnsureDeletePod(ctx, e.kubeClient.CoreV1(), restorePodName, ownerObject.Namespace, param.OperationTimeout)
 	if err != nil {
 		return errors.Wrapf(err, "error to delete restore pod %s", restorePodName)
 	}
 
-	err = kube.EnsureDeletePVC(ctx, e.kubeClient.CoreV1(), restorePVCName, ownerObject.Namespace, timeout)
+	err = kube.EnsureDeletePVC(ctx, e.kubeClient.CoreV1(), restorePVCName, ownerObject.Namespace, param.OperationTimeout)
 	if err != nil {
 		return errors.Wrapf(err, "error to delete restore PVC %s", restorePVCName)
 	}
@@ -453,7 +465,7 @@ func (e *genericRestoreExposer) RebindVolume(ctx context.Context, ownerObject co
 
 	curLog.WithField("restore PV", restorePV.Name).Info("Restore PV is rebound")
 
-	restorePV, err = kube.WaitPVBound(ctx, e.kubeClient.CoreV1(), restorePV.Name, targetPVC.Name, targetPVC.Namespace, timeout)
+	restorePV, err = kube.WaitPVBound(ctx, e.kubeClient.CoreV1(), restorePV.Name, targetPVC.Name, targetPVC.Namespace, param.OperationTimeout)
 	if err != nil {
 		return errors.Wrapf(err, "error to wait restore PV bound, restore PV %s", restorePVName)
 	}
