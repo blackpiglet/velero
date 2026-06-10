@@ -27,7 +27,7 @@ The following is an overview of Velero's restore process that starts after you r
 
 1. The Velero client makes a call to the Kubernetes API server to create a [`Restore`](api-types/restore.md) object.
 
-1. The `RestoreController` notices the new Restore object and performs validation.
+1. The `RestoreController` notices the new Restore object and performs validation. This includes verifying that the referenced backup is in a usable phase. Only backups in `Completed` or `PartiallyFailed` phase are accepted as restore sources.
 
 1. The `RestoreController` fetches basic information about the backup being restored, like the [BackupStorageLocation](locations.md) (BSL). It also fetches a tarball of the cluster resources in the backup, any volumes that will be restored using File System Backup, and any volume snapshots to be restored.
 
@@ -78,26 +78,41 @@ By default, Velero will restore resources in the following order:
 * VolumeSnapshotClass
 * VolumeSnapshotContents
 * VolumeSnapshots
+* DataUploads
 * PersistentVolumes
 * PersistentVolumeClaims
+* ClusterRoles
+* Roles
+* ServiceAccounts
+* ClusterRoleBindings
+* RoleBindings
 * Secrets
 * ConfigMaps
-* ServiceAccounts
 * LimitRanges
+* PriorityClasses
 * Pods
 * ReplicaSets
+* ClusterClasses
+* Endpoints
+* Services
+* ClusterBootstraps
 * Clusters
 * ClusterResourceSets
+* Apps (apps.kappctrl.k14s.io)
+* PackageInstalls
 
-It's recommended that you use the default order for your restores. You are able to customize this order if you need to by setting the `--restore-resource-priorities` flag on the Velero server and specifying a different resource order. This customized order will apply to all future restores. You don't have to specify all resources in the `--restore-resource-priorities` flag. Velero will append resources not listed to the end of your customized list in alphabetical order.
+It's recommended that you use the default order for your restores. You are able to customize this order if you need to by setting the `--restore-resource-priorities` flag on the Velero server and specifying a different resource order. This customized order will apply to all future restores. You don't have to specify all resources in the `--restore-resource-priorities` flag. The priority list contains two parts which are split by the `-` element: resources before the `-` element are restored first as high priorities, resources after the `-` element are restored last as low priorities, and any resource not in the list will be restored alphabetically between the high and low priorities.
 
 ```shell
 velero server \
 --restore-resource-priorities=customresourcedefinitions,namespaces,storageclasses,\
 volumesnapshotclass.snapshot.storage.k8s.io,volumesnapshotcontents.snapshot.storage.k8s.io,\
-volumesnapshots.snapshot.storage.k8s.io,persistentvolumes,persistentvolumeclaims,secrets,\
-configmaps,serviceaccounts,limitranges,pods,replicasets.apps,clusters.cluster.x-k8s.io,\
-clusterresourcesets.addons.cluster.x-k8s.io
+volumesnapshots.snapshot.storage.k8s.io,datauploads.velero.io,persistentvolumes,\
+persistentvolumeclaims,clusterroles,roles,serviceaccounts,clusterrolebindings,rolebindings,\
+secrets,configmaps,limitranges,priorityclasses,pods,replicasets.apps,\
+clusterclasses.cluster.x-k8s.io,endpoints,services,-,clusterbootstraps.run.tanzu.vmware.com,\
+clusters.cluster.x-k8s.io,clusterresourcesets.addons.cluster.x-k8s.io,apps.kappctrl.k14s.io,\
+packageinstalls.packaging.carvel.dev
 ```
 
 
