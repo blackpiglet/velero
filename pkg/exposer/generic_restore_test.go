@@ -535,7 +535,11 @@ func TestRebindVolume(t *testing.T) {
 
 			hookCount = 0
 
-			err := exposer.RebindVolume(t.Context(), ownerObject, test.targetPVCName, test.targetNamespace, time.Millisecond)
+			err := exposer.RebindVolume(t.Context(), ownerObject, GenericRestoreRebindVolumeParam{
+				TargetPVCName:    test.targetPVCName,
+				TargetNamespace:  test.targetNamespace,
+				OperationTimeout: time.Millisecond,
+			})
 			assert.EqualError(t, err, test.err)
 		})
 	}
