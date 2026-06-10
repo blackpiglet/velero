@@ -142,6 +142,42 @@ func (ib *itemBackupper) itemInclusionChecks(log logrus.FieldLogger, mustInclude
 			log.Info("Excluding item because resource is excluded")
 			return false
 		}
+
+		// Per-kind name filter from ResourcePolicy namespace filter.
+		if namespace != "" {
+			if nsFilter := ib.backupRequest.GetNamespaceFilter(namespace); nsFilter != nil {
+				rf := nsFilter.ResourceFilterMap[groupResource.String()]
+				if rf == nil {
+					rf = nsFilter.CatchAllFilter
+				}
+				// When rf is still nil the item's kind is not listed in the namespace filter and
+				// there is no catch-all entry. This is an intentional permissive passthrough:
+				// plugin-injected additional items (returned by BackupItemAction) must be able
+				// to reach the archive even when their kind was not explicitly listed in
+				// namespacedFilterPolicies, because excluding them at Stage 2 would break backup
+				// completeness. For example, a CSI plugin may inject a VolumeSnapshotContent
+				// as an additional item that is required for a correct restore. Kind-level
+				// exclusion for the primary collection pass is enforced earlier in
+				// item_collector.go (Stage 1).
+				if rf != nil && rf.NameIE != nil {
+					if !rf.NameIE.ShouldInclude(metadata.GetName()) {
+						log.Infof("Excluding item: name does not match resource filter for kind %s",
+							groupResource)
+						return false
+					}
+				}
+			}
+		} else {
+			// Cluster-scoped resource name filter
+			if ib.backupRequest.ClusterScopedFilterMap != nil {
+				if rf, ok := ib.backupRequest.ClusterScopedFilterMap[groupResource.String()]; ok && rf.NameIE != nil {
+					if !rf.NameIE.ShouldInclude(metadata.GetName()) {
+						log.Infof("Excluding item: name does not match clusterScopedFilterPolicy for kind %s", groupResource)
+						return false
+					}
+				}
+			}
+		}
 	}
 
 	if metadata.GetDeletionTimestamp() != nil {
