@@ -497,7 +497,8 @@ func (r *itemCollector) getResourceItems(
 				kind:          resource.Kind,
 			})
 
-			if item.GetNamespace() != "" {
+			if item.GetNamespace() != "" &&
+				r.backupRequest.NamespaceIncludesExcludes.ShouldInclude(item.GetNamespace()) {
 				log.Debugf("Track namespace %s in nsTracker", item.GetNamespace())
 				r.nsTracker.track(item.GetNamespace())
 			}
@@ -633,12 +634,15 @@ func coreGroupResourcePriority(resource string) int {
 }
 
 // getNamespacesToList examines ie and resolves the includes and excludes to a full list of
-// namespaces to list. If ie is nil, the result is just "" (list across all namespaces).
-// Otherwise, the result is a list of every included namespace minus all excluded ones.
-// Because the namespace IE filter is expanded from 1.18, there is no need to consider
-// wildcard characters anymore.
+// namespaces to list. If ie is nil or it includes *, the result is just "" (list across all
+// namespaces). Otherwise, the result is a list of every included namespace minus all excluded ones.
 func getNamespacesToList(ie *collections.NamespaceIncludesExcludes) []string {
 	if ie == nil {
+		return []string{""}
+	}
+
+	if ie.ShouldInclude("*") {
+		// "" means all namespaces
 		return []string{""}
 	}
 
