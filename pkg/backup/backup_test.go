@@ -6107,15 +6107,43 @@ func TestGetNamespaceFilter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// First call (populates cache)
 			result := req.GetNamespaceFilter(tt.namespace)
 
 			if tt.expectNil {
 				assert.Nil(t, result)
+
+				// Verify negative cache
+				val, ok := req.NamespaceFilterCache.Load(tt.namespace)
+				assert.True(t, ok)
+				assert.Nil(t, val)
 			} else {
 				assert.NotNil(t, result)
 				// Ensure the returned filter points to the correct reference in our map
 				assert.Same(t, filterMap[tt.expectMatched], result)
+
+				// Verify positive cache
+				val, ok := req.NamespaceFilterCache.Load(tt.namespace)
+				assert.True(t, ok)
+				assert.Same(t, filterMap[tt.expectMatched], val)
 			}
+
+			// Second call (hits cache)
+			result2 := req.GetNamespaceFilter(tt.namespace)
+			assert.Same(t, result, result2)
 		})
 	}
+}
+
+func TestGetNamespaceFilter_CacheBypass(t *testing.T) {
+	req := &Request{
+		NamespacedFilterMap: make(map[string]*ResolvedNamespaceFilter),
+	}
+
+	cachedFilter := &ResolvedNamespaceFilter{}
+	req.NamespaceFilterCache.Store("cached-ns", cachedFilter)
+
+	// Since NamespacedFilterMap is empty, this would normally return nil,
+	// but the cache should return our cachedFilter.
+	assert.Same(t, cachedFilter, req.GetNamespaceFilter("cached-ns"))
 }
