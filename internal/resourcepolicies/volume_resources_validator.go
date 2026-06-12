@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"go.yaml.in/yaml/v3"
 )
 
