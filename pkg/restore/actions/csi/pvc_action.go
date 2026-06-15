@@ -427,6 +427,7 @@ func newDataDownload(
 			TargetVolume: velerov2alpha1.TargetVolumeSpec{
 				PVC:       pvc.Name,
 				Namespace: newNamespace,
+				FSType:    dataUploadResult.FSType,
 			},
 			BackupStorageLocation: dataUploadResult.BackupStorageLocation,
 			DataMover:             dataUploadResult.DataMover,
