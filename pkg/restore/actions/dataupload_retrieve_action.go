@@ -80,6 +80,7 @@ func (d *DataUploadRetrieveAction) Execute(input *velero.RestoreItemActionExecut
 		SourceNamespace:       dataUpload.Spec.SourceNamespace,
 		DataMoverResult:       dataUpload.Status.DataMoverResult,
 		NodeOS:                dataUpload.Status.NodeOS,
+		FSType:                dataUpload.Spec.SourceFSType,
 	}
 
 	jsonBytes, err := json.Marshal(dataUploadResult)

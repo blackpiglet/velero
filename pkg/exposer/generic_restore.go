@@ -91,6 +91,9 @@ type GenericRestoreRebindVolumeParam struct {
 
 	// OperationTimeout specifies the time wait for resources operations in Expose
 	OperationTimeout time.Duration
+
+	// TargetFSType is the file system type of the target volume
+	TargetFSType string
 }
 
 // GenericRestoreExposer is the interfaces for a generic restore exposer
