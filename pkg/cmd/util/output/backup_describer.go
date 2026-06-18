@@ -99,6 +99,8 @@ func DescribeBackup(
 			DescribeFineGrainedFilterPolicies(ctx, kbClient, d, backup)
 		}
 
+		DescribeGlobalVolumePolicy(d, backup)
+
 		if backup.Spec.UploaderConfig != nil && backup.Spec.UploaderConfig.ParallelFilesUpload > 0 {
 			d.Println()
 			DescribeUploaderConfigForBackup(d, backup.Spec)
@@ -134,6 +136,19 @@ func DescribeResourcePolicies(d *Describer, resPolicies *corev1api.TypedLocalObj
 	d.Printf("Resource policies:\n")
 	d.Printf("\tType:\t%s\n", resPolicies.Kind)
 	d.Printf("\tName:\t%s\n", resPolicies.Name)
+}
+
+// DescribeGlobalVolumePolicy describes the cluster-wide global backup volume policies
+// ConfigMap that contributed to the backup, if any.
+func DescribeGlobalVolumePolicy(d *Describer, backup *velerov1api.Backup) {
+	name := backup.Annotations[velerov1api.GlobalBackupVolumePolicyConfigMapAnnotation]
+	if name == "" {
+		return
+	}
+	d.Println()
+	d.Printf("Global volume policies:\n")
+	d.Printf("\tType:\t%s\n", resourcepolicies.ConfigmapRefType)
+	d.Printf("\tName:\t%s\n", name)
 }
 
 // DescribeFineGrainedFilterPolicies describes cluster-scoped and namespace-scoped filter policies if present

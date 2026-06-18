@@ -18,11 +18,15 @@ package resourcepolicies
 import (
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	velerotest "github.com/vmware-tanzu/velero/pkg/test"
 )
 
 func pvcVolumeMode(mode corev1api.PersistentVolumeMode) *corev1api.PersistentVolumeMode {
@@ -2171,4 +2175,193 @@ func TestPVCAccessModesMatch(t *testing.T) {
 			assert.Equal(t, tc.expectedMatch, result)
 		})
 	}
+}
+
+// ---- Global backup volume policies ----
+
+func globalPolicyConfigMap(name, data string) *corev1api.ConfigMap {
+	return &corev1api.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "velero", Name: name},
+		Data:       map[string]string{"policies.yaml": data},
+	}
+}
+
+func backupWithPolicy(ref string) velerov1api.Backup {
+	b := velerov1api.Backup{ObjectMeta: metav1.ObjectMeta{Namespace: "velero", Name: "backup"}}
+	if ref != "" {
+		b.Spec.ResourcePolicy = &corev1api.TypedLocalObjectReference{Kind: ConfigmapRefType, Name: ref}
+	}
+	return b
+}
+
+// firstActionFor returns the action type the policies select for a PV with the given storage
+// class, or "" when nothing matches. It exercises the compiled match logic so the tests verify
+// merge ordering rather than internal field layout.
+func firstActionFor(p *Policies, storageClass string) VolumeActionType {
+	pv := &corev1api.PersistentVolume{Spec: corev1api.PersistentVolumeSpec{StorageClassName: storageClass}}
+	vol := &structuredVolume{}
+	vol.parsePV(pv)
+	if a := p.match(vol); a != nil {
+		return a.Type
+	}
+	return ""
+}
+
+func TestGetResourcePoliciesFromBackupWithGlobal(t *testing.T) {
+	gp2Skip := `version: v1
+volumePolicies:
+  - conditions:
+      storageClass:
+        - gp2
+    action:
+      type: skip
+`
+	gp2Snapshot := `version: v1
+volumePolicies:
+  - conditions:
+      storageClass:
+        - gp2
+    action:
+      type: snapshot
+`
+	otherFsBackup := `version: v1
+volumePolicies:
+  - conditions:
+      storageClass:
+        - other
+    action:
+      type: fs-backup
+`
+
+	tests := []struct {
+		name                string
+		backupCM            *corev1api.ConfigMap
+		globalCMName        string
+		globalCM            *corev1api.ConfigMap
+		backupRef           string
+		expectErr           bool
+		expectedGp2Action   VolumeActionType
+		expectedNumPolicies int
+	}{
+		{
+			name:                "no global, backup only - unchanged behavior",
+			backupRef:           "backup01",
+			backupCM:            globalPolicyConfigMap("backup01", gp2Snapshot),
+			expectedGp2Action:   Snapshot,
+			expectedNumPolicies: 1,
+		},
+		{
+			name:                "global only, backup has no policy",
+			globalCMName:        "global",
+			globalCM:            globalPolicyConfigMap("global", gp2Skip),
+			expectedGp2Action:   Skip,
+			expectedNumPolicies: 1,
+		},
+		{
+			name:                "no global configured and no backup policy",
+			expectedGp2Action:   "",
+			expectedNumPolicies: 0,
+		},
+		{
+			name:                "merge - backup policy overrides global for gp2",
+			backupRef:           "backup01",
+			backupCM:            globalPolicyConfigMap("backup01", gp2Snapshot),
+			globalCMName:        "global",
+			globalCM:            globalPolicyConfigMap("global", gp2Skip),
+			expectedGp2Action:   Snapshot, // backup-level wins (evaluated first)
+			expectedNumPolicies: 2,
+		},
+		{
+			name:                "merge - backup inherits non-overlapping global rule",
+			backupRef:           "backup01",
+			backupCM:            globalPolicyConfigMap("backup01", otherFsBackup),
+			globalCMName:        "global",
+			globalCM:            globalPolicyConfigMap("global", gp2Skip),
+			expectedGp2Action:   Skip, // only global matches gp2
+			expectedNumPolicies: 2,
+		},
+		{
+			name:         "global configmap missing - error",
+			globalCMName: "global",
+			expectErr:    true,
+		},
+		{
+			name:         "global configmap invalid - error",
+			globalCMName: "global",
+			globalCM:     globalPolicyConfigMap("global", "not: [valid"),
+			expectErr:    true,
+		},
+		{
+			// Parses cleanly but fails Policies.Validate() due to the unsupported version.
+			name:         "global configmap fails validation - error",
+			globalCMName: "global",
+			globalCM:     globalPolicyConfigMap("global", "version: v2\nvolumePolicies: []\n"),
+			expectErr:    true,
+		},
+		{
+			// Backup references a ResourcePolicy ConfigMap that does not exist, so resolving the
+			// backup-level policies fails before the global ones are consulted.
+			name:         "backup configmap missing - error",
+			backupRef:    "missing-backup-cm",
+			globalCMName: "global",
+			globalCM:     globalPolicyConfigMap("global", gp2Skip),
+			expectErr:    true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			client := velerotest.NewFakeControllerRuntimeClient(t)
+			if tc.backupCM != nil {
+				require.NoError(t, client.Create(t.Context(), tc.backupCM))
+			}
+			if tc.globalCM != nil {
+				require.NoError(t, client.Create(t.Context(), tc.globalCM))
+			}
+
+			b := backupWithPolicy(tc.backupRef)
+
+			p, err := GetResourcePoliciesFromBackupWithGlobal(b, client, tc.globalCMName, "velero", logrus.New())
+			if tc.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+
+			if tc.expectedNumPolicies == 0 {
+				assert.Nil(t, p)
+				return
+			}
+			require.NotNil(t, p)
+			assert.Len(t, p.volumePolicies, tc.expectedNumPolicies)
+			assert.Equal(t, tc.expectedGp2Action, firstActionFor(p, "gp2"))
+		})
+	}
+}
+
+func TestGetGlobalResourcePoliciesIgnoresNonVolumePolicies(t *testing.T) {
+	data := `version: v1
+volumePolicies:
+  - conditions:
+      storageClass:
+        - gp2
+    action:
+      type: skip
+namespacedFilterPolicies:
+- namespaces: ["frontend"]
+  resourceFilters:
+  - kinds: ["Pod"]
+`
+	client := velerotest.NewFakeControllerRuntimeClient(t)
+	require.NoError(t, client.Create(t.Context(), globalPolicyConfigMap("global", data)))
+
+	p, err := GetGlobalResourcePolicies(client, "velero", "global", logrus.New())
+	require.NoError(t, err)
+	require.NotNil(t, p)
+
+	// Only volumePolicies are kept; the namespaced filter policy is dropped.
+	assert.Len(t, p.volumePolicies, 1)
+	assert.Empty(t, p.GetNamespacedFilterPolicies())
+	assert.Nil(t, p.GetIncludeExcludePolicy())
+	assert.Nil(t, p.GetClusterScopedFilterPolicy())
 }
