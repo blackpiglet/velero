@@ -452,6 +452,13 @@ func (e *genericRestoreExposer) RebindVolume(ctx context.Context, ownerObject co
 
 	curLog.WithField("restore PVC", restorePVCName).Info("Restore PVC is deleted")
 
+	err = kube.WaitVolumeDetached(ctx, e.kubeClient.StorageV1(), retained.Name, param.OperationTimeout)
+	if err != nil {
+		return errors.Wrapf(err, "error waiting for retained PV %s to detach", retained.Name)
+	}
+
+	curLog.WithField("retained PV", retained.Name).Info("Retained PV is detached")
+
 	rebindPV, err = kube.RebindPV(ctx, e.kubeClient.CoreV1(), uuid.NewString(), retained, targetPVC, orgReclaim, param.TargetFSType)
 	if err != nil {
 		return errors.Wrapf(err, "error rebinding PV for target PVC %s", param.TargetPVCName)
