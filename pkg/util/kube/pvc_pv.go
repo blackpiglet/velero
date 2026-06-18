@@ -324,15 +324,10 @@ func RebindPV(ctx context.Context, pvGetter corev1client.CoreV1Interface, pvName
 		maps.Copy(pvLabel, pvc.Spec.Selector.MatchLabels)
 	}
 
-	pvAnnotations := make(map[string]string)
-	maps.Copy(pvAnnotations, source.Annotations)
-	delete(pvAnnotations, KubeAnnBoundByController)
-
 	pv := &corev1api.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        pvName,
-			Labels:      pvLabel,
-			Annotations: pvAnnotations,
+			Name:   pvName,
+			Labels: pvLabel,
 		},
 		Spec: corev1api.PersistentVolumeSpec{
 			Capacity:                      source.Spec.Capacity,
@@ -357,6 +352,10 @@ func RebindPV(ctx context.Context, pvGetter corev1client.CoreV1Interface, pvName
 
 func clonePVSource(source *corev1api.PersistentVolumeSource, newFSType string) corev1api.PersistentVolumeSource {
 	newSource := source.DeepCopy()
+
+	if newSource.CSI != nil && newSource.CSI.VolumeAttributes != nil {
+		delete(newSource.CSI.VolumeAttributes, "storage.kubernetes.io/csiProvisionerIdentity")
+	}
 
 	if newFSType != "" {
 		if newSource.CSI != nil {
@@ -684,20 +683,69 @@ func GetPVAttachedNode(ctx context.Context, pv string, storageClient storagev1.S
 	return "", nil
 }
 
-func GetPVAttachedNodes(ctx context.Context, pv string, storageClient storagev1.StorageV1Interface) ([]string, error) {
+func getPVAttachment(ctx context.Context, pv string, storageClient storagev1.StorageV1Interface) ([]*storagev1api.VolumeAttachment, error) {
 	vaList, err := storageClient.VolumeAttachments().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrapf(err, "error listing volumeattachment")
 	}
 
-	nodes := []string{}
+	attachments := []*storagev1api.VolumeAttachment{}
 	for _, va := range vaList.Items {
 		if va.Spec.Source.PersistentVolumeName != nil && *va.Spec.Source.PersistentVolumeName == pv {
-			nodes = append(nodes, va.Spec.NodeName)
+			attachments = append(attachments, &va)
 		}
 	}
 
+	return attachments, nil
+}
+
+func GetPVAttachedNodes(ctx context.Context, pv string, storageClient storagev1.StorageV1Interface) ([]string, error) {
+	attachments, err := getPVAttachment(ctx, pv, storageClient)
+	if err != nil {
+		return nil, errors.Wrap(err, "error listing volumeattachment")
+	}
+
+	nodes := []string{}
+	for _, attach := range attachments {
+		nodes = append(nodes, attach.Spec.NodeName)
+	}
+
 	return nodes, nil
+}
+
+func WaitVolumeDetached(ctx context.Context, storageClient storagev1.StorageV1Interface, pv string, timeout time.Duration) error {
+	attachments, err := getPVAttachment(ctx, pv, storageClient)
+	if err != nil {
+		return errors.Wrap(err, "error listing volumeattachment")
+	}
+
+	err = wait.PollUntilContextTimeout(ctx, waitInternal, timeout, true, func(ctx context.Context) (bool, error) {
+		left := []*storagev1api.VolumeAttachment{}
+		for _, attach := range attachments {
+			if _, err := storageClient.VolumeAttachments().Get(ctx, attach.Name, metav1.GetOptions{}); err == nil {
+				left = append(left, attach)
+			} else if !apierrors.IsNotFound(err) {
+				return false, err // Return the error if it's not a NotFound error
+			}
+		}
+
+		if len(left) == 0 {
+			return true, nil
+		}
+
+		attachments = left
+
+		return false, nil
+	})
+
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return errors.Errorf("timeout waiting for volume %s to be detached", pv)
+		}
+		return errors.Wrapf(err, "error waiting for volume %s to be detached", pv)
+	}
+
+	return nil
 }
 
 func GetVolumeTopology(ctx context.Context, volumeClient corev1client.CoreV1Interface, storageClient storagev1.StorageV1Interface, pvName string, scName string) (*corev1api.NodeSelector, error) {
