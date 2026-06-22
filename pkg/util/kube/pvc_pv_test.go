@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -2239,9 +2240,7 @@ func TestRebindPV(t *testing.T) {
 						"key1": "val3",
 						"key2": "val2",
 					},
-					Annotations: map[string]string{
-						"anno1": "val1",
-					},
+					Annotations: nil,
 				},
 				Spec: corev1api.PersistentVolumeSpec{
 					Capacity: sourcePV.Spec.Capacity,
@@ -2361,6 +2360,96 @@ func TestClonePVSource(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			actual := clonePVSource(test.source, test.newFSType)
 			assert.Equal(t, test.expected, actual)
+		})
+	}
+}
+
+func TestWaitVolumeDetached(t *testing.T) {
+	pvName := "test-pv"
+	otherPVName := "other-pv"
+
+	volAttach1 := &storagev1api.VolumeAttachment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "va-1",
+		},
+		Spec: storagev1api.VolumeAttachmentSpec{
+			Source: storagev1api.VolumeAttachmentSource{
+				PersistentVolumeName: &pvName,
+			},
+		},
+	}
+
+	volAttach2 := &storagev1api.VolumeAttachment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "va-2",
+		},
+		Spec: storagev1api.VolumeAttachmentSpec{
+			Source: storagev1api.VolumeAttachmentSource{
+				PersistentVolumeName: &otherPVName,
+			},
+		},
+	}
+
+	tests := []struct {
+		name         string
+		kubeReactors []reactor
+		timeout      time.Duration
+		expectedErr  string
+		storageObjs  []runtime.Object
+	}{
+		{
+			name:    "no volume attachments",
+			timeout: time.Second,
+		},
+		{
+			name:        "volume attachments exist and deleted",
+			timeout:     time.Second,
+			storageObjs: []runtime.Object{volAttach1, volAttach2},
+			kubeReactors: []reactor{
+				{
+					verb:     "get",
+					resource: "volumeattachments",
+					reactorFunc: func(action clientTesting.Action) (handled bool, ret runtime.Object, err error) {
+						return true, nil, apierrors.NewNotFound(schema.GroupResource{Group: "storage.k8s.io", Resource: "volumeattachments"}, "va-1")
+					},
+				},
+			},
+		},
+		{
+			name:        "volume attachments exist and not deleted",
+			timeout:     2 * time.Millisecond,
+			storageObjs: []runtime.Object{volAttach1, volAttach2},
+			expectedErr: "timeout waiting for volume test-pv to be detached",
+		},
+		{
+			name:        "get returns error",
+			timeout:     time.Second,
+			storageObjs: []runtime.Object{volAttach1, volAttach2},
+			kubeReactors: []reactor{
+				{
+					verb:     "get",
+					resource: "volumeattachments",
+					reactorFunc: func(action clientTesting.Action) (handled bool, ret runtime.Object, err error) {
+						return true, nil, errors.New("fake-error")
+					},
+				},
+			},
+			expectedErr: "error waiting for volume test-pv to be detached: fake-error",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			fakeKubeClient := fake.NewSimpleClientset(test.storageObjs...)
+			for _, reactor := range test.kubeReactors {
+				fakeKubeClient.Fake.PrependReactor(reactor.verb, reactor.resource, reactor.reactorFunc)
+			}
+			err := WaitVolumeDetached(t.Context(), fakeKubeClient.StorageV1(), pvName, test.timeout)
+			if test.expectedErr != "" {
+				assert.EqualError(t, err, test.expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

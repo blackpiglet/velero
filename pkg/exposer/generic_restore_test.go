@@ -444,6 +444,28 @@ func TestRebindVolume(t *testing.T) {
 			err: "error to delete restore PVC fake-restore: error to delete pvc fake-restore: fake-delete-error",
 		},
 		{
+			name:            "wait volume detached fail",
+			targetPVCName:   "fake-target-pvc",
+			targetNamespace: "fake-ns",
+			ownerRestore:    restore,
+			kubeClientObj: []runtime.Object{
+				targetPVCObj,
+				restorePVCObj,
+				restorePVObj,
+				restorePod,
+			},
+			kubeReactors: []reactor{
+				{
+					verb:     "list",
+					resource: "volumeattachments",
+					reactorFunc: func(action clientTesting.Action) (handled bool, ret runtime.Object, err error) {
+						return true, nil, errors.New("fake-list-error")
+					},
+				},
+			},
+			err: "error waiting for retained PV fake-restore-pv to detach: error listing volumeattachment: error listing volumeattachment: fake-list-error",
+		},
+		{
 			name:            "rebind pv fail",
 			targetPVCName:   "fake-target-pvc",
 			targetNamespace: "fake-ns",
