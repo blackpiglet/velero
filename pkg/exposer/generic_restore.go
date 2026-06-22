@@ -450,6 +450,10 @@ func (e *genericRestoreExposer) rebindVolumeChangeMode(ctx context.Context, owne
 		}
 	}()
 
+	if retained != nil {
+		restorePV = retained
+	}
+
 	err = kube.EnsureDeletePod(ctx, e.kubeClient.CoreV1(), restorePodName, ownerObject.Namespace, param.OperationTimeout)
 	if err != nil {
 		return errors.Wrapf(err, "error to delete restore pod %s", restorePodName)
@@ -462,26 +466,26 @@ func (e *genericRestoreExposer) rebindVolumeChangeMode(ctx context.Context, owne
 
 	curLog.WithField("restore PVC", restorePVCName).Info("Restore PVC is deleted")
 
-	err = kube.WaitVolumeDetached(ctx, e.kubeClient.StorageV1(), retained.Name, param.OperationTimeout)
+	err = kube.WaitVolumeDetached(ctx, e.kubeClient.StorageV1(), restorePV.Name, param.OperationTimeout)
 	if err != nil {
-		return errors.Wrapf(err, "error waiting for retained PV %s to detach", retained.Name)
+		return errors.Wrapf(err, "error waiting for restore PV %s to detach", restorePV.Name)
 	}
 
-	curLog.WithField("retained PV", retained.Name).Info("Retained PV is detached")
+	curLog.WithField("restore PV", restorePV.Name).Info("Restore PV is detached")
 
-	rebindPV, err = kube.RebindPV(ctx, e.kubeClient.CoreV1(), uuid.NewString(), retained, targetPVC, orgReclaim, param.TargetFSType)
+	rebindPV, err = kube.RebindPV(ctx, e.kubeClient.CoreV1(), uuid.NewString(), restorePV, targetPVC, orgReclaim, param.TargetFSType)
 	if err != nil {
 		return errors.Wrapf(err, "error rebinding PV for target PVC %s", param.TargetPVCName)
 	}
 
 	curLog.WithField("rebind PV", rebindPV.Name).Info("Rebind PV is created")
 
-	err = kube.EnsureDeletePV(ctx, e.kubeClient.CoreV1(), retained.Name, param.OperationTimeout)
+	err = kube.EnsureDeletePV(ctx, e.kubeClient.CoreV1(), restorePV.Name, param.OperationTimeout)
 	if err != nil {
-		return errors.Wrapf(err, "error deleting PV %s", retained.Name)
+		return errors.Wrapf(err, "error deleting restore PV %s", restorePV.Name)
 	}
 
-	curLog.WithField("retained PV", retained.Name).Info("Retained PV is deleted")
+	curLog.WithField("restore PV", restorePV.Name).Info("Restore PV is deleted")
 
 	retained = nil
 
