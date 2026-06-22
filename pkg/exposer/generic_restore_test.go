@@ -480,7 +480,7 @@ func TestRebindVolume(t *testing.T) {
 					},
 				},
 			},
-			err: "error waiting for retained PV fake-restore-pv to detach: error listing volumeattachment: error listing volumeattachment: fake-list-error",
+			err: "error waiting for restore PV fake-restore-pv to detach: error listing volumeattachment: error listing volumeattachment: fake-list-error",
 		},
 		{
 			name:            "[change mode] rebind pv fail",
@@ -528,7 +528,7 @@ func TestRebindVolume(t *testing.T) {
 					},
 				},
 			},
-			err: "error deleting PV fake-restore-pv: error to delete pv fake-restore-pv: fake-delete-error",
+			err: "error deleting restore PV fake-restore-pv: error to delete pv fake-restore-pv: fake-delete-error",
 		},
 		{
 			name:            "[change mode] rebind target pvc fail",
