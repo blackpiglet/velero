@@ -319,10 +319,26 @@ func TestRebindVolume(t *testing.T) {
 		},
 	}
 
-	targetPVCObj := &corev1api.PersistentVolumeClaim{
+	modeFilesystem := corev1api.PersistentVolumeFilesystem
+	modeBlock := corev1api.PersistentVolumeBlock
+
+	targetPVCObjChangeMode := &corev1api.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "fake-ns",
 			Name:      "fake-target-pvc",
+		},
+		Spec: corev1api.PersistentVolumeClaimSpec{
+			VolumeMode: &modeBlock,
+		},
+	}
+
+	targetPVCObjSameMode := &corev1api.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "fake-ns",
+			Name:      "fake-target-pvc",
+		},
+		Spec: corev1api.PersistentVolumeClaimSpec{
+			VolumeMode: &modeFilesystem,
 		},
 	}
 
@@ -342,6 +358,7 @@ func TestRebindVolume(t *testing.T) {
 		},
 		Spec: corev1api.PersistentVolumeSpec{
 			PersistentVolumeReclaimPolicy: corev1api.PersistentVolumeReclaimDelete,
+			VolumeMode:                    &modeFilesystem,
 		},
 	}
 
@@ -374,17 +391,17 @@ func TestRebindVolume(t *testing.T) {
 			targetNamespace: "fake-ns",
 			ownerRestore:    restore,
 			kubeClientObj: []runtime.Object{
-				targetPVCObj,
+				targetPVCObjSameMode,
 			},
 			err: "error to get PV from restore PVC fake-restore: error to wait for rediness of PVC: error to get pvc velero/fake-restore: persistentvolumeclaims \"fake-restore\" not found",
 		},
 		{
-			name:            "retain target pv fail",
+			name:            "[change mode] retain target pv fail",
 			targetPVCName:   "fake-target-pvc",
 			targetNamespace: "fake-ns",
 			ownerRestore:    restore,
 			kubeClientObj: []runtime.Object{
-				targetPVCObj,
+				targetPVCObjChangeMode,
 				restorePVCObj,
 				restorePVObj,
 			},
@@ -400,12 +417,12 @@ func TestRebindVolume(t *testing.T) {
 			err: "error to retain PV fake-restore-pv: error patching PV: fake-patch-error",
 		},
 		{
-			name:            "delete restore pod fail",
+			name:            "[change mode] delete restore pod fail",
 			targetPVCName:   "fake-target-pvc",
 			targetNamespace: "fake-ns",
 			ownerRestore:    restore,
 			kubeClientObj: []runtime.Object{
-				targetPVCObj,
+				targetPVCObjChangeMode,
 				restorePVCObj,
 				restorePVObj,
 				restorePod,
@@ -422,12 +439,12 @@ func TestRebindVolume(t *testing.T) {
 			err: "error to delete restore pod fake-restore: error to delete pod fake-restore: fake-delete-error",
 		},
 		{
-			name:            "delete restore pvc fail",
+			name:            "[change mode] delete restore pvc fail",
 			targetPVCName:   "fake-target-pvc",
 			targetNamespace: "fake-ns",
 			ownerRestore:    restore,
 			kubeClientObj: []runtime.Object{
-				targetPVCObj,
+				targetPVCObjChangeMode,
 				restorePVCObj,
 				restorePVObj,
 				restorePod,
@@ -444,12 +461,12 @@ func TestRebindVolume(t *testing.T) {
 			err: "error to delete restore PVC fake-restore: error to delete pvc fake-restore: fake-delete-error",
 		},
 		{
-			name:            "wait volume detached fail",
+			name:            "[change mode] wait volume detached fail",
 			targetPVCName:   "fake-target-pvc",
 			targetNamespace: "fake-ns",
 			ownerRestore:    restore,
 			kubeClientObj: []runtime.Object{
-				targetPVCObj,
+				targetPVCObjChangeMode,
 				restorePVCObj,
 				restorePVObj,
 				restorePod,
@@ -466,12 +483,12 @@ func TestRebindVolume(t *testing.T) {
 			err: "error waiting for retained PV fake-restore-pv to detach: error listing volumeattachment: error listing volumeattachment: fake-list-error",
 		},
 		{
-			name:            "rebind pv fail",
+			name:            "[change mode] rebind pv fail",
 			targetPVCName:   "fake-target-pvc",
 			targetNamespace: "fake-ns",
 			ownerRestore:    restore,
 			kubeClientObj: []runtime.Object{
-				targetPVCObj,
+				targetPVCObjChangeMode,
 				restorePVCObj,
 				restorePVObj,
 				restorePod,
@@ -488,12 +505,12 @@ func TestRebindVolume(t *testing.T) {
 			err: "error rebinding PV for target PVC fake-target-pvc: fake-create-error",
 		},
 		{
-			name:            "delete retained pv fail",
+			name:            "[change mode] delete retained pv fail",
 			targetPVCName:   "fake-target-pvc",
 			targetNamespace: "fake-ns",
 			ownerRestore:    restore,
 			kubeClientObj: []runtime.Object{
-				targetPVCObj,
+				targetPVCObjChangeMode,
 				restorePVCObj,
 				restorePVObj,
 				restorePod,
@@ -503,19 +520,23 @@ func TestRebindVolume(t *testing.T) {
 					verb:     "delete",
 					resource: "persistentvolumes",
 					reactorFunc: func(action clientTesting.Action) (handled bool, ret runtime.Object, err error) {
-						return true, nil, errors.New("fake-delete-error")
+						// we want it to fail on the PV deletion but not the pod/pvc deletions
+						if action.(clientTesting.DeleteAction).GetName() == "fake-restore-pv" {
+							return true, nil, errors.New("fake-delete-error")
+						}
+						return false, nil, nil
 					},
 				},
 			},
 			err: "error deleting PV fake-restore-pv: error to delete pv fake-restore-pv: fake-delete-error",
 		},
 		{
-			name:            "rebind target pvc fail",
+			name:            "[change mode] rebind target pvc fail",
 			targetPVCName:   "fake-target-pvc",
 			targetNamespace: "fake-ns",
 			ownerRestore:    restore,
 			kubeClientObj: []runtime.Object{
-				targetPVCObj,
+				targetPVCObjChangeMode,
 				restorePVCObj,
 				restorePVObj,
 				restorePod,
@@ -532,17 +553,167 @@ func TestRebindVolume(t *testing.T) {
 			err: "error to rebind target PVC fake-ns/fake-target-pvc to",
 		},
 		{
-			name:            "wait rebind PV ready fail",
+			name:            "[change mode] wait rebind PV ready fail",
 			targetPVCName:   "fake-target-pvc",
 			targetNamespace: "fake-ns",
 			ownerRestore:    restore,
 			kubeClientObj: []runtime.Object{
-				targetPVCObj,
+				targetPVCObjChangeMode,
 				restorePVCObj,
 				restorePVObj,
 				restorePod,
 			},
 			err: "error to wait rebind PV ready, rebind PV",
+		},
+		{
+			name:            "[same mode] retain target pv fail",
+			targetPVCName:   "fake-target-pvc",
+			targetNamespace: "fake-ns",
+			ownerRestore:    restore,
+			kubeClientObj: []runtime.Object{
+				targetPVCObjSameMode,
+				restorePVCObj,
+				restorePVObj,
+			},
+			kubeReactors: []reactor{
+				{
+					verb:     "patch",
+					resource: "persistentvolumes",
+					reactorFunc: func(action clientTesting.Action) (handled bool, ret runtime.Object, err error) {
+						return true, nil, errors.New("fake-patch-error")
+					},
+				},
+			},
+			err: "error to retain PV fake-restore-pv: error patching PV: fake-patch-error",
+		},
+		{
+			name:            "[same mode] delete restore pod fail",
+			targetPVCName:   "fake-target-pvc",
+			targetNamespace: "fake-ns",
+			ownerRestore:    restore,
+			kubeClientObj: []runtime.Object{
+				targetPVCObjSameMode,
+				restorePVCObj,
+				restorePVObj,
+				restorePod,
+			},
+			kubeReactors: []reactor{
+				{
+					verb:     "delete",
+					resource: "pods",
+					reactorFunc: func(action clientTesting.Action) (handled bool, ret runtime.Object, err error) {
+						return true, nil, errors.New("fake-delete-error")
+					},
+				},
+			},
+			err: "error to delete restore pod fake-restore: error to delete pod fake-restore: fake-delete-error",
+		},
+		{
+			name:            "[same mode] delete restore pvc fail",
+			targetPVCName:   "fake-target-pvc",
+			targetNamespace: "fake-ns",
+			ownerRestore:    restore,
+			kubeClientObj: []runtime.Object{
+				targetPVCObjSameMode,
+				restorePVCObj,
+				restorePVObj,
+				restorePod,
+			},
+			kubeReactors: []reactor{
+				{
+					verb:     "delete",
+					resource: "persistentvolumeclaims",
+					reactorFunc: func(action clientTesting.Action) (handled bool, ret runtime.Object, err error) {
+						return true, nil, errors.New("fake-delete-error")
+					},
+				},
+			},
+			err: "error to delete restore PVC fake-restore: error to delete pvc fake-restore: fake-delete-error",
+		},
+		{
+			name:            "[same mode] wait volume detached fail",
+			targetPVCName:   "fake-target-pvc",
+			targetNamespace: "fake-ns",
+			ownerRestore:    restore,
+			kubeClientObj: []runtime.Object{
+				targetPVCObjSameMode,
+				restorePVCObj,
+				restorePVObj,
+				restorePod,
+			},
+			kubeReactors: []reactor{
+				{
+					verb:     "list",
+					resource: "volumeattachments",
+					reactorFunc: func(action clientTesting.Action) (handled bool, ret runtime.Object, err error) {
+						return true, nil, errors.New("fake-list-error")
+					},
+				},
+			},
+			err: "error waiting for restore PV fake-restore-pv to detach: error listing volumeattachment: error listing volumeattachment: fake-list-error",
+		},
+		{
+			name:            "[same mode] rebind target pvc fail",
+			targetPVCName:   "fake-target-pvc",
+			targetNamespace: "fake-ns",
+			ownerRestore:    restore,
+			kubeClientObj: []runtime.Object{
+				targetPVCObjSameMode,
+				restorePVCObj,
+				restorePVObj,
+				restorePod,
+			},
+			kubeReactors: []reactor{
+				{
+					verb:     "patch",
+					resource: "persistentvolumeclaims",
+					reactorFunc: func(action clientTesting.Action) (handled bool, ret runtime.Object, err error) {
+						return true, nil, errors.New("fake-patch-error")
+					},
+				},
+			},
+			err: "error to rebind target PVC fake-ns/fake-target-pvc to fake-restore-pv: error patching PVC: fake-patch-error",
+		},
+		{
+			name:            "[same mode] reset pv binding fail",
+			targetPVCName:   "fake-target-pvc",
+			targetNamespace: "fake-ns",
+			ownerRestore:    restore,
+			kubeClientObj: []runtime.Object{
+				targetPVCObjSameMode,
+				restorePVCObj,
+				restorePVObj,
+				restorePod,
+			},
+			kubeReactors: []reactor{
+				{
+					verb:     "patch",
+					resource: "persistentvolumes",
+					reactorFunc: func(action clientTesting.Action) (handled bool, ret runtime.Object, err error) {
+						// we need it to succeed on set reclaim policy, but fail on reset binding
+						patchAction := action.(clientTesting.PatchAction)
+						patchString := string(patchAction.GetPatch())
+						if patchString != `{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}` {
+							return true, nil, errors.New("fake-patch-error-reset")
+						}
+						return false, nil, nil
+					},
+				},
+			},
+			err: "error to reset binding info for restore PV fake-restore-pv: error patching PV: fake-patch-error-reset",
+		},
+		{
+			name:            "[same mode] wait restore PV bound fail",
+			targetPVCName:   "fake-target-pvc",
+			targetNamespace: "fake-ns",
+			ownerRestore:    restore,
+			kubeClientObj: []runtime.Object{
+				targetPVCObjSameMode,
+				restorePVCObj,
+				restorePVObj,
+				restorePod,
+			},
+			err: "error to wait restore PV bound, restore PV fake-restore-pv: error to wait for bound of PV: context deadline exceeded",
 		},
 	}
 
@@ -583,7 +754,6 @@ func TestRebindVolume(t *testing.T) {
 		})
 	}
 }
-
 func TestRestorePeekExpose(t *testing.T) {
 	restore := &velerov1.Restore{
 		TypeMeta: metav1.TypeMeta{
