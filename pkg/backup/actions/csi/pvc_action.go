@@ -166,6 +166,7 @@ func (p *pvcBackupItemAction) validatePVCandPV(
 ) (
 	valid bool,
 	updateItem runtime.Unstructured,
+	fsType string,
 	err error,
 ) {
 	updateItem = item
@@ -174,6 +175,7 @@ func (p *pvcBackupItemAction) validatePVCandPV(
 	if pvc.Spec.StorageClassName == nil {
 		return false,
 			updateItem,
+			"",
 			errors.Errorf(
 				"Cannot snapshot PVC %s/%s, PVC has no storage class.",
 				pvc.Namespace, pvc.Name)
@@ -187,7 +189,7 @@ func (p *pvcBackupItemAction) validatePVCandPV(
 	// Do nothing if this is not a CSI provisioned volume
 	pv, err := kubeutil.GetPVForPVC(&pvc, p.crClient)
 	if err != nil {
-		return false, updateItem, errors.WithStack(err)
+		return false, updateItem, "", errors.WithStack(err)
 	}
 
 	if pv.Spec.PersistentVolumeSource.CSI == nil {
@@ -202,10 +204,10 @@ func (p *pvcBackupItemAction) validatePVCandPV(
 			})
 		data, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&pvc)
 		updateItem = &unstructured.Unstructured{Object: data}
-		return false, updateItem, err
+		return false, updateItem, "", err
 	}
 
-	return true, updateItem, nil
+	return true, updateItem, pv.Spec.PersistentVolumeSource.CSI.FSType, nil
 }
 
 func (p *pvcBackupItemAction) createVolumeSnapshot(
@@ -301,10 +303,12 @@ func (p *pvcBackupItemAction) Execute(
 	); err != nil {
 		return nil, nil, "", nil, errors.WithStack(err)
 	}
-	if valid, item, err := p.validatePVCandPV(
+
+	valid, item, fsType, err := p.validatePVCandPV(
 		pvc,
 		item,
-	); !valid {
+	)
+	if !valid {
 		if err != nil {
 			return nil, nil, "", nil, err
 		}
@@ -392,6 +396,7 @@ func (p *pvcBackupItemAction) Execute(
 			&pvc,
 			operationID,
 			vsc,
+			fsType,
 		)
 		if err != nil {
 			dataUploadLog.WithError(err).Error("failed to submit DataUpload")
@@ -530,6 +535,7 @@ func newDataUpload(
 	pvc *corev1api.PersistentVolumeClaim,
 	operationID string,
 	vsc *snapshotv1api.VolumeSnapshotContent,
+	fsType string,
 ) *velerov2alpha1.DataUpload {
 	dataUpload := &velerov2alpha1.DataUpload{
 		TypeMeta: metav1.TypeMeta{
@@ -567,6 +573,7 @@ func newDataUpload(
 			BackupStorageLocation: backup.Spec.StorageLocation,
 			SourceNamespace:       pvc.Namespace,
 			OperationTimeout:      backup.Spec.CSISnapshotTimeout,
+			SourceFSType:          fsType,
 		},
 	}
 
@@ -591,8 +598,9 @@ func createDataUpload(
 	pvc *corev1api.PersistentVolumeClaim,
 	operationID string,
 	vsc *snapshotv1api.VolumeSnapshotContent,
+	fsType string,
 ) (*velerov2alpha1.DataUpload, error) {
-	dataUpload := newDataUpload(backup, vs, pvc, operationID, vsc)
+	dataUpload := newDataUpload(backup, vs, pvc, operationID, vsc, fsType)
 
 	err := crClient.Create(ctx, dataUpload)
 	if err != nil {

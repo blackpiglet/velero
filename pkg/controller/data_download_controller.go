@@ -479,6 +479,7 @@ func (r *DataDownloadReconciler) OnDataDownloadCompleted(ctx context.Context, na
 		TargetPVCName:    dd.Spec.TargetVolume.PVC,
 		TargetNamespace:  dd.Spec.TargetVolume.Namespace,
 		OperationTimeout: dd.Spec.OperationTimeout.Duration,
+		TargetFSType:     dd.Spec.TargetVolume.FSType,
 	})
 	if err != nil {
 		log.WithError(err).Error("Failed to rebind PV to target PVC on completion")
