@@ -331,20 +331,20 @@ func GetResourcePoliciesFromBackup(
 		if err != nil {
 			logger.Errorf("Fail to get ResourcePolicies %s ConfigMap with error %s.",
 				backup.Namespace+"/"+backup.Spec.ResourcePolicy.Name, err.Error())
-			return nil, fmt.Errorf("fail to get ResourcePolicies %s ConfigMap with error %s",
-				backup.Namespace+"/"+backup.Spec.ResourcePolicy.Name, err.Error())
+			return nil, fmt.Errorf("fail to get ResourcePolicies %s ConfigMap: %w",
+				backup.Namespace+"/"+backup.Spec.ResourcePolicy.Name, err)
 		}
 		resourcePolicies, err = getResourcePoliciesFromConfig(policiesConfigMap)
 		if err != nil {
 			logger.Errorf("Fail to read ResourcePolicies from ConfigMap %s with error %s.",
 				backup.Namespace+"/"+backup.Name, err.Error())
-			return nil, fmt.Errorf("fail to read the ResourcePolicies from ConfigMap %s with error %s",
-				backup.Namespace+"/"+backup.Name, err.Error())
+			return nil, fmt.Errorf("fail to read the ResourcePolicies from ConfigMap %s: %w",
+				backup.Namespace+"/"+backup.Name, err)
 		} else if err = resourcePolicies.Validate(); err != nil {
 			logger.Errorf("Fail to validate ResourcePolicies in ConfigMap %s with error %s.",
 				backup.Namespace+"/"+backup.Name, err.Error())
-			return nil, fmt.Errorf("fail to validate ResourcePolicies in ConfigMap %s with error %s",
-				backup.Namespace+"/"+backup.Name, err.Error())
+			return nil, fmt.Errorf("fail to validate ResourcePolicies in ConfigMap %s: %w",
+				backup.Namespace+"/"+backup.Name, err)
 		}
 	}
 
@@ -423,6 +423,49 @@ func GetResourcePoliciesFromBackupWithGlobal(
 	// Backup-level policies first, then global, so backups can override the global baseline.
 	backupPolicies.volumePolicies = append(backupPolicies.volumePolicies, globalPolicies.volumePolicies...)
 	return backupPolicies, nil
+}
+
+// GetResourcePoliciesFromRestore retrieves the resource policies from the ConfigMap referenced in the Restore spec.
+func GetResourcePoliciesFromRestore(
+	ctx context.Context,
+	restore *velerov1api.Restore,
+	client crclient.Client,
+	logger logrus.FieldLogger,
+) (resourcePolicies *Policies, err error) {
+	if restore.Spec.ResourcePolicy != nil {
+		if !strings.EqualFold(restore.Spec.ResourcePolicy.Kind, ConfigmapRefType) {
+			return nil, fmt.Errorf("invalid ResourcePolicy kind %q, only %q is supported",
+				restore.Spec.ResourcePolicy.Kind, ConfigmapRefType)
+		}
+		policiesConfigMap := &corev1api.ConfigMap{}
+		err = client.Get(
+			ctx,
+			crclient.ObjectKey{
+				Namespace: restore.Namespace,
+				Name:      restore.Spec.ResourcePolicy.Name,
+			},
+			policiesConfigMap,
+		)
+		if err != nil {
+			logger.Errorf("Fail to get ResourcePolicies %s ConfigMap with error %s.",
+				restore.Namespace+"/"+restore.Spec.ResourcePolicy.Name, err.Error())
+			return nil, fmt.Errorf("fail to get ResourcePolicies %s ConfigMap: %w",
+				restore.Namespace+"/"+restore.Spec.ResourcePolicy.Name, err)
+		}
+		resourcePolicies, err = getResourcePoliciesFromConfig(policiesConfigMap)
+		if err != nil {
+			logger.Errorf("Fail to read ResourcePolicies from ConfigMap %s with error %s.",
+				restore.Namespace+"/"+restore.Spec.ResourcePolicy.Name, err.Error())
+			return nil, fmt.Errorf("fail to read the ResourcePolicies from ConfigMap %s: %w",
+				restore.Namespace+"/"+restore.Spec.ResourcePolicy.Name, err)
+		} else if err = resourcePolicies.Validate(); err != nil {
+			logger.Errorf("Fail to validate ResourcePolicies in ConfigMap %s with error %s.",
+				restore.Namespace+"/"+restore.Spec.ResourcePolicy.Name, err.Error())
+			return nil, fmt.Errorf("fail to validate ResourcePolicies in ConfigMap %s: %w",
+				restore.Namespace+"/"+restore.Spec.ResourcePolicy.Name, err)
+		}
+	}
+	return resourcePolicies, nil
 }
 
 func getResourcePoliciesFromConfig(cm *corev1api.ConfigMap) (*Policies, error) {

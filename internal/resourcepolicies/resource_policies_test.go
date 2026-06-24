@@ -16,6 +16,7 @@ limitations under the License.
 package resourcepolicies
 
 import (
+	"context"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -24,6 +25,8 @@ import (
 	corev1api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	velerotest "github.com/vmware-tanzu/velero/pkg/test"
@@ -492,6 +495,49 @@ volumePolicies:
 	}
 
 	assert.Equal(t, p, resPolicies)
+}
+
+func TestGetResourcePoliciesFromRestore(t *testing.T) {
+	// Create a test ConfigMap
+	cm := &corev1api.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-configmap",
+			Namespace: "test-namespace",
+		},
+		Data: map[string]string{
+			"test-data": `version: v1
+volumePolicies:
+  - conditions:
+      capacity: '0,10Gi'
+      csi:
+        driver: disks.csi.driver
+    action:
+      type: skip
+`,
+		},
+	}
+
+	// Create a fake client
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(cm).Build()
+	logger := logrus.New()
+
+	restore := velerov1api.Restore{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-namespace",
+			Name:      "test-restore",
+		},
+		Spec: velerov1api.RestoreSpec{
+			ResourcePolicy: &corev1api.TypedLocalObjectReference{
+				Kind: ConfigmapRefType,
+				Name: "test-configmap",
+			},
+		},
+	}
+
+	resPolicies, err := GetResourcePoliciesFromRestore(context.Background(), &restore, client, logger)
+	require.NoError(t, err)
+	assert.Equal(t, "v1", resPolicies.version)
+	assert.Len(t, resPolicies.volumePolicies, 1)
 }
 
 func TestGetMatchAction(t *testing.T) {
