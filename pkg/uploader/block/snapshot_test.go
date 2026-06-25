@@ -46,8 +46,8 @@ func (m *mockUploader) Backup(src sourceInfo, parent udmrepo.ID, iter cbttypes.I
 	return args.Get(0).(udmrepo.Snapshot), args.Get(1).(int64), args.Error(2)
 }
 
-func (m *mockUploader) Restore(snap udmrepo.Snapshot, dest destInfo, cfg map[string]string) (int64, error) {
-	args := m.Called(snap, dest, cfg)
+func (m *mockUploader) Restore(snap udmrepo.Snapshot, dest destInfo, iter cbttypes.Iterator, cfg map[string]string) (int64, error) {
+	args := m.Called(snap, dest, iter, cfg)
 	return args.Get(0).(int64), args.Error(1)
 }
 
@@ -360,6 +360,8 @@ func TestGetParentBackupInfo(t *testing.T) {
 			setupMocks: func(repo *udmrepomocks.BackupRepo) {
 				repo.On("GetSnapshot", mock.Anything, udmrepo.ID("snap-valid")).
 					Return(validSnap, nil)
+				repo.On("ReadMetadata", mock.Anything, udmrepo.ID("root-obj")).
+					Return(&udmrepo.Metadata{SubObjects: []udmrepo.ObjectMetadata{{ID: "root-obj"}}}, nil)
 			},
 			expectedParent: "root-obj",
 			expectedCID:    "cid-abc",
@@ -386,6 +388,8 @@ func TestGetParentBackupInfo(t *testing.T) {
 			setupMocks: func(repo *udmrepomocks.BackupRepo) {
 				repo.On("ListSnapshot", mock.Anything, realSource).
 					Return([]udmrepo.Snapshot{validSnap}, nil)
+				repo.On("ReadMetadata", mock.Anything, udmrepo.ID("root-obj")).
+					Return(&udmrepo.Metadata{SubObjects: []udmrepo.ObjectMetadata{{ID: "root-obj"}}}, nil)
 			},
 			expectedParent: "root-obj",
 			expectedCID:    "cid-abc",
@@ -566,7 +570,7 @@ func TestRestore(t *testing.T) {
 			setupMocks: func(blkup *mockUploader, repo *udmrepomocks.BackupRepo) {
 				repo.On("GetSnapshot", mock.Anything, udmrepo.ID("snap-001")).
 					Return(storedSnap, nil)
-				blkup.On("Restore", mock.Anything, mock.Anything, mock.Anything).
+				blkup.On("Restore", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(int64(0), errors.New("restore I/O error"))
 			},
 			setupOpenDev: func(t *testing.T) *os.File {
@@ -579,7 +583,7 @@ func TestRestore(t *testing.T) {
 			setupMocks: func(blkup *mockUploader, repo *udmrepomocks.BackupRepo) {
 				repo.On("GetSnapshot", mock.Anything, udmrepo.ID("snap-001")).
 					Return(storedSnap, nil)
-				blkup.On("Restore", mock.Anything, mock.Anything, mock.Anything).
+				blkup.On("Restore", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(int64(4096), nil)
 			},
 			setupOpenDev: func(t *testing.T) *os.File {

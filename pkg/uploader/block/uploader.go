@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
 	"github.com/vmware-tanzu/velero/pkg/repository/udmrepo"
 	"github.com/vmware-tanzu/velero/pkg/uploader"
 	cbt "github.com/vmware-tanzu/velero/pkg/uploader/cbt/types"
@@ -46,9 +47,10 @@ type destInfo struct {
 
 type Uploader interface {
 	Backup(sourceInfo, udmrepo.ID, cbt.Iterator, map[string]string) (udmrepo.Snapshot, int64, error)
-	Restore(udmrepo.Snapshot, destInfo, map[string]string) (int64, error)
+	Restore(udmrepo.Snapshot, destInfo, cbt.Iterator, map[string]string) (int64, error)
 }
 
+// implement in following PRs
 func NewUploader(ctx context.Context, repoWriter udmrepo.BackupRepo, progress uploader.ProgressUpdater, log logrus.FieldLogger) Uploader {
 	return nil
 }
@@ -60,11 +62,11 @@ func loadObjectFromSnapshot(ctx context.Context, rep udmrepo.BackupRepo, snapsho
 
 	parentMeta, err := rep.ReadMetadata(ctx, snapshot.RootObject.ID)
 	if err != nil {
-		return "", errors.Wrapf(err, "error readding snapshot metadata for %s", snapshot.Description)
+		return "", errors.Wrapf(err, "error reading snapshot metadata for %s", snapshot.Description)
 	}
 
 	if len(parentMeta.SubObjects) != 1 {
-		return "", errors.Wrapf(err, "unexpected number of bdev object (%d) for snapshot %s", len(parentMeta.SubObjects), snapshot.Description)
+		return "", errors.Errorf("unexpected number of bdev object (%d) for snapshot %s", len(parentMeta.SubObjects), snapshot.Description)
 	}
 
 	return parentMeta.SubObjects[0].ID, nil

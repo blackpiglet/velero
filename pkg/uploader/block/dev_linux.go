@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// implement in following PRs
 func openBlockDevice(path string, read bool) (*os.File, error) {
 	return nil, errors.New("Not implemented")
 }
