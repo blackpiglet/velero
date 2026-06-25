@@ -744,31 +744,25 @@ func TestGetResourcePoliciesFromRestore(t *testing.T) {
 		},
 		Data: map[string]string{
 			"test-data": `version: v1
-volumePolicies:
-  - conditions:
-      capacity: '0,10Gi'
-      csi:
-        driver: disks.csi.driver
-    action:
-      type: skip
+namespacedFilterPolicies:
+  - namespaces: ["default"]
+    resourceFilters:
+      - kinds: ["Pod"]
 `,
 		},
 	}
 
-	invalidActionCM := &corev1api.ConfigMap{
+	invalidNfpCM := &corev1api.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "invalid-action-configmap",
 			Namespace: "test-namespace",
 		},
 		Data: map[string]string{
 			"test-data": `version: v1
-volumePolicies:
-  - conditions:
-      capacity: '0,10Gi'
-      csi:
-        driver: disks.csi.driver
-    action:
-      type: invalid-action
+namespacedFilterPolicies:
+  - namespaces: []
+    resourceFilters:
+      - kinds: ["Pod"]
 `,
 		},
 	}
@@ -780,13 +774,10 @@ volumePolicies:
 		},
 		Data: map[string]string{
 			"test-data": `version: v2
-volumePolicies:
-  - conditions:
-      capacity: '0,10Gi'
-      csi:
-        driver: disks.csi.driver
-    action:
-      type: skip
+namespacedFilterPolicies:
+  - namespaces: ["default"]
+    resourceFilters:
+      - kinds: ["Pod"]
 `,
 		},
 	}
@@ -798,7 +789,7 @@ volumePolicies:
 		},
 	}
 
-	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(validCM, invalidActionCM, invalidVersionCM, emptyCM).Build()
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(validCM, invalidNfpCM, invalidVersionCM, emptyCM).Build()
 	logger := logrus.New()
 
 	testCases := []struct {

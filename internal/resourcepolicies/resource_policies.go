@@ -303,6 +303,30 @@ func (p *Policies) Validate() error {
 	return nil
 }
 
+func (p *Policies) ValidateForRestore() error {
+	if p.version != currentSupportDataVersion {
+		return fmt.Errorf("incompatible version number %s with supported version %s", p.version, currentSupportDataVersion)
+	}
+
+	if len(p.volumePolicies) > 0 {
+		return fmt.Errorf("volumePolicies are not supported for restore")
+	}
+
+	if p.GetIncludeExcludePolicy() != nil {
+		return fmt.Errorf("includeExcludePolicy is not supported for restore")
+	}
+
+	if err := p.validateClusterScopedFilterPolicy(); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := p.validateNamespacedFilterPolicies(); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
 func (p *Policies) GetIncludeExcludePolicy() *IncludeExcludePolicy {
 	return p.includeExcludePolicy
 }
@@ -458,7 +482,7 @@ func GetResourcePoliciesFromRestore(
 				restore.Namespace+"/"+restore.Spec.ResourcePolicy.Name, err.Error())
 			return nil, fmt.Errorf("fail to read the ResourcePolicies from ConfigMap %s: %w",
 				restore.Namespace+"/"+restore.Spec.ResourcePolicy.Name, err)
-		} else if err = resourcePolicies.Validate(); err != nil {
+		} else if err = resourcePolicies.ValidateForRestore(); err != nil {
 			logger.Errorf("Fail to validate ResourcePolicies in ConfigMap %s with error %s.",
 				restore.Namespace+"/"+restore.Spec.ResourcePolicy.Name, err.Error())
 			return nil, fmt.Errorf("fail to validate ResourcePolicies in ConfigMap %s: %w",
