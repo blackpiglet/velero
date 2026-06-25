@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/vmware-tanzu/velero/pkg/cbtservice"
@@ -41,9 +41,9 @@ type parentBackupInfo struct {
 }
 
 // Backup backup specific sourcePath and update progress
-func Backup(ctx context.Context, blkup Uploader, repoWriter udmrepo.BackupRepo, sourcePath string, realSource string, cbtSource cbtservice.SourceInfo,
-	forceFull bool, parentSnapshot string, cbtservice cbtservice.Service, uploaderCfg map[string]string, tags map[string]string, log logrus.FieldLogger) (uploader.SnapshotInfo, bool, error) {
-	if blkup == nil {
+func Backup(ctx context.Context, blkUp Uploader, repoWriter udmrepo.BackupRepo, sourcePath string, realSource string, cbtSource cbtservice.SourceInfo,
+	forceFull bool, parentSnapshot string, cbtService cbtservice.Service, uploaderCfg map[string]string, tags map[string]string, log logrus.FieldLogger) (uploader.SnapshotInfo, bool, error) {
+	if blkUp == nil {
 		return uploader.SnapshotInfo{}, false, errors.New("get empty block uploader")
 	}
 
@@ -77,7 +77,7 @@ func Backup(ctx context.Context, blkup Uploader, repoWriter udmrepo.BackupRepo, 
 		return uploader.SnapshotInfo{}, false, errors.Wrapf(err, "error reset pos of block device %s", source)
 	}
 
-	snapID, backupSize, err := snapshotSource(ctx, repoWriter, blkup, sourceInfo, forceFull, parentSnapshot, cbtSource, cbtservice, tags, uploaderCfg, log, "Block Uploader")
+	snapID, backupSize, err := snapshotSource(ctx, repoWriter, blkUp, sourceInfo, forceFull, parentSnapshot, cbtSource, cbtService, tags, uploaderCfg, log, "Block Uploader")
 	snapshotInfo := uploader.SnapshotInfo{
 		ID:              snapID,
 		Size:            sourceInfo.size,
@@ -95,7 +95,7 @@ func snapshotSource(
 	forceFull bool,
 	parentSnapshot string,
 	cbtSource cbtservice.SourceInfo,
-	cbtservice cbtservice.Service,
+	cbtService cbtservice.Service,
 	snapshotTags map[string]string,
 	uploaderCfg map[string]string,
 	log logrus.FieldLogger,
@@ -108,7 +108,7 @@ func snapshotSource(
 
 	bitmap := cbt.NewBitmap(blockSize, uint64(source.size), cbtSource.Snapshot, parentBackup.changeID, parentBackup.volumeID)
 
-	err := cbt.SetBitmapOrFull(ctx, cbtservice, bitmap)
+	err := cbt.SetBitmapOrFull(ctx, cbtService, bitmap)
 	if err != nil {
 		parentBackup.parentObject = ""
 		log.WithError(err).Warnf("Failed to create CBT with source %v, fallback to real full backup", cbtSource)
@@ -193,7 +193,7 @@ func getParentBackupInfo(ctx context.Context, rep udmrepo.BackupRepo, forceFull 
 }
 
 // Restore restore specific sourcePath with given snapshotID and update progress
-func Restore(ctx context.Context, blkup Uploader, rep udmrepo.BackupRepo, snapshotID, dest string, uploaderCfg map[string]string, log logrus.FieldLogger) (int64, error) {
+func Restore(ctx context.Context, blkUp Uploader, rep udmrepo.BackupRepo, snapshotID, dest string, uploaderCfg map[string]string, log logrus.FieldLogger) (int64, error) {
 	log.Info("Start to restore...")
 
 	snapshot, err := rep.GetSnapshot(ctx, udmrepo.ID(snapshotID))
@@ -218,7 +218,7 @@ func Restore(ctx context.Context, blkup Uploader, rep udmrepo.BackupRepo, snapsh
 		return 0, errors.Wrapf(err, "error opening block device '%s'", destPath)
 	}
 
-	size, err := blkup.Restore(snapshot, destInfo{dev: destDev, path: destPath}, bitmap.Iterator(), uploaderCfg)
+	size, err := blkUp.Restore(snapshot, destInfo{dev: destDev, path: destPath}, bitmap.Iterator(), uploaderCfg)
 	if err != nil {
 		return 0, errors.Wrapf(err, "error restoring to block dev %s", destPath)
 	}

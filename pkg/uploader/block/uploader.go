@@ -20,7 +20,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/vmware-tanzu/velero/pkg/repository/udmrepo"
@@ -60,14 +60,14 @@ func loadObjectFromSnapshot(ctx context.Context, rep udmrepo.BackupRepo, snapsho
 		return "", errors.New("snapshot is empty")
 	}
 
-	parentMeta, err := rep.ReadMetadata(ctx, snapshot.RootObject.ID)
+	meta, err := rep.ReadMetadata(ctx, snapshot.RootObject.ID)
 	if err != nil {
 		return "", errors.Wrapf(err, "error reading snapshot metadata for %s", snapshot.Description)
 	}
 
-	if len(parentMeta.SubObjects) != 1 {
-		return "", errors.Errorf("unexpected number of bdev object (%d) for snapshot %s", len(parentMeta.SubObjects), snapshot.Description)
+	if len(meta.SubObjects) != 1 {
+		return "", errors.Errorf("unexpected number of bdev object (%d) for snapshot %s", len(meta.SubObjects), snapshot.Description)
 	}
 
-	return parentMeta.SubObjects[0].ID, nil
+	return meta.SubObjects[0].ID, nil
 }

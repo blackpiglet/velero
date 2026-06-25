@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -59,7 +59,7 @@ func testLog() logrus.FieldLogger {
 
 func tempFile(t *testing.T, content string) *os.File {
 	t.Helper()
-	f, err := os.CreateTemp("", "blktest-*")
+	f, err := os.CreateTemp(t.TempDir(), "blktest-*")
 	require.NoError(t, err)
 	if content != "" {
 		_, err = f.WriteString(content)
@@ -93,6 +93,7 @@ func TestBackup(t *testing.T) {
 		{
 			name: "SnapshotSource error propagates",
 			setupOpenDev: func(t *testing.T) *os.File {
+				t.Helper()
 				return tempFile(t, "")
 			},
 			setupMocks: func(blkup *mockUploader, _ *udmrepomocks.BackupRepo) {
@@ -104,6 +105,7 @@ func TestBackup(t *testing.T) {
 		{
 			name: "success returns correct SnapshotInfo",
 			setupOpenDev: func(t *testing.T) *os.File {
+				t.Helper()
 				return tempFile(t, "test-block-data")
 			},
 			setupMocks: func(blkup *mockUploader, repo *udmrepomocks.BackupRepo) {
@@ -113,9 +115,10 @@ func TestBackup(t *testing.T) {
 				repo.On("Flush", mock.Anything).Return(nil)
 			},
 			checkInfo: func(t *testing.T, info uploader.SnapshotInfo) {
+				t.Helper()
 				assert.Equal(t, "snap-001", info.ID)
 				assert.Equal(t, int64(8), info.IncrementalSize)
-				assert.Greater(t, info.Size, int64(0))
+				assert.Positive(t, info.Size)
 			},
 		},
 	}
@@ -157,7 +160,7 @@ func TestBackup(t *testing.T) {
 
 			if tc.expectedErrStr != "" {
 				require.Error(t, err)
-				assert.ErrorContains(t, err, tc.expectedErrStr)
+				require.ErrorContains(t, err, tc.expectedErrStr)
 			} else {
 				require.NoError(t, err)
 				assert.False(t, isEmpty)
@@ -260,7 +263,7 @@ func TestSnapshotSource(t *testing.T) {
 
 			if tc.expectedErrStr != "" {
 				require.Error(t, err)
-				assert.ErrorContains(t, err, tc.expectedErrStr)
+				require.ErrorContains(t, err, tc.expectedErrStr)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tc.expectedSnapID, snapID)
@@ -530,7 +533,7 @@ func TestFindPreviousSnapshot(t *testing.T) {
 
 			if tc.expectedErrStr != "" {
 				require.Error(t, err)
-				assert.ErrorContains(t, err, tc.expectedErrStr)
+				require.ErrorContains(t, err, tc.expectedErrStr)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, udmrepo.ID(tc.expectedID), snap.RootObject.ID)
@@ -574,6 +577,7 @@ func TestRestore(t *testing.T) {
 					Return(int64(0), errors.New("restore I/O error"))
 			},
 			setupOpenDev: func(t *testing.T) *os.File {
+				t.Helper()
 				return tempFile(t, "")
 			},
 			expectedErrStr: "error restoring to block dev",
@@ -587,6 +591,7 @@ func TestRestore(t *testing.T) {
 					Return(int64(4096), nil)
 			},
 			setupOpenDev: func(t *testing.T) *os.File {
+				t.Helper()
 				return tempFile(t, "")
 			},
 			expectedSize: 4096,
@@ -616,7 +621,7 @@ func TestRestore(t *testing.T) {
 
 			if tc.expectedErrStr != "" {
 				require.Error(t, err)
-				assert.ErrorContains(t, err, tc.expectedErrStr)
+				require.ErrorContains(t, err, tc.expectedErrStr)
 				assert.Equal(t, int64(0), size)
 			} else {
 				require.NoError(t, err)

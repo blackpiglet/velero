@@ -280,6 +280,7 @@ func TestBlockProviderRunBackup(t *testing.T) {
 			mockBackupResult: uploader.SnapshotInfo{ID: "snap-tags"},
 			expectedID:       "snap-tags",
 			checkCaptures: func(t *testing.T, _ string, tags map[string]string) {
+				t.Helper()
 				assert.Equal(t, requestorType, tags[uploader.SnapshotRequesterTag])
 				assert.Equal(t, uploader.BlockType, tags[uploader.SnapshotUploaderTag])
 			},
@@ -292,6 +293,7 @@ func TestBlockProviderRunBackup(t *testing.T) {
 			mockBackupResult: uploader.SnapshotInfo{ID: "snap-source"},
 			expectedID:       "snap-source",
 			checkCaptures: func(t *testing.T, realSource string, _ map[string]string) {
+				t.Helper()
 				assert.Equal(t, requestorType+"/"+uploader.BlockType+"/my-volume", realSource)
 			},
 		},
@@ -303,7 +305,8 @@ func TestBlockProviderRunBackup(t *testing.T) {
 			mockBackupResult: uploader.SnapshotInfo{ID: "snap-nosource"},
 			expectedID:       "snap-nosource",
 			checkCaptures: func(t *testing.T, realSource string, _ map[string]string) {
-				assert.Equal(t, "", realSource)
+				t.Helper()
+				assert.Empty(t, realSource)
 			},
 		},
 	}
@@ -349,7 +352,7 @@ func TestBlockProviderRunBackup(t *testing.T) {
 			if tc.expectError {
 				require.Error(t, err)
 				if tc.expectedErrStr != "" {
-					assert.ErrorContains(t, err, tc.expectedErrStr)
+					require.ErrorContains(t, err, tc.expectedErrStr)
 				}
 			} else {
 				require.NoError(t, err)
@@ -416,6 +419,7 @@ func TestBlockProviderRunRestore(t *testing.T) {
 			mockRestoreSize: 512,
 			expectedSize:    512,
 			checkCaptures: func(t *testing.T, snapshotID, volumePath string) {
+				t.Helper()
 				assert.Equal(t, "snap-fwd", snapshotID)
 				assert.Equal(t, "/dev/sdc", volumePath)
 			},
@@ -452,7 +456,7 @@ func TestBlockProviderRunRestore(t *testing.T) {
 			if tc.expectError {
 				require.Error(t, err)
 				if tc.expectedErrStr != "" {
-					assert.ErrorContains(t, err, tc.expectedErrStr)
+					require.ErrorContains(t, err, tc.expectedErrStr)
 				}
 				assert.Equal(t, int64(0), size)
 			} else {

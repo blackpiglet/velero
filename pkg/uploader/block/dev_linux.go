@@ -22,7 +22,7 @@ package block
 import (
 	"os"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 )
 
 // implement in following PRs

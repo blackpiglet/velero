@@ -20,7 +20,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -101,7 +101,7 @@ func TestLoadObjectFromSnapshot(t *testing.T) {
 
 			if tc.expectedErrStr != "" {
 				require.Error(t, err)
-				assert.ErrorContains(t, err, tc.expectedErrStr)
+				require.ErrorContains(t, err, tc.expectedErrStr)
 				assert.Empty(t, id)
 			} else {
 				require.NoError(t, err)

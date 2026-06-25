@@ -25,5 +25,5 @@ import (
 )
 
 func openBlockDevice(_ string, _ bool) (*os.File, error) {
-	return nil, fmt.Errorf("block mode is not supported for Windows")
+	return nil, fmt.Errorf("block mode is not supported for non-linux platforms")
 }
