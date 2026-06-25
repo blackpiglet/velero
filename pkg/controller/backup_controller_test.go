@@ -46,6 +46,7 @@ import (
 	kbclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakeClient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/vmware-tanzu/velero/internal/resourcepolicies"
 	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	pkgbackup "github.com/vmware-tanzu/velero/pkg/backup"
 	"github.com/vmware-tanzu/velero/pkg/builder"
@@ -2074,6 +2075,100 @@ namespacedFilterPolicies:
 	})
 
 	assert.True(t, hasTargetError, "expected validation error about namespacedFilterPolicies incompatibility with old-style filters, got: %v", res.Status.ValidationErrors)
+}
+
+// TestPrepareBackupRequest_GlobalVolumePolicies verifies that the cluster-wide global backup
+// volume policies are merged into the request and that the contributing ConfigMap is recorded
+// on the backup so `velero backup describe` can surface it.
+func TestPrepareBackupRequest_GlobalVolumePolicies(t *testing.T) {
+	formatFlag := logging.FormatText
+	logger := logging.DefaultLogger(logrus.DebugLevel, formatFlag)
+
+	globalCM := &corev1api.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: "global-volume-policy", Namespace: velerov1api.DefaultNamespace},
+		Data: map[string]string{"policies.yaml": `version: v1
+volumePolicies:
+  - conditions:
+      storageClass:
+        - gp2
+    action:
+      type: skip
+`},
+	}
+
+	fakeClient := velerotest.NewFakeControllerRuntimeClient(t, globalCM,
+		builder.ForBackupStorageLocation(velerov1api.DefaultNamespace, "loc-1").Result())
+	apiServer := velerotest.NewAPIServer(t)
+	discoveryHelper, err := discovery.NewHelper(apiServer.DiscoveryClient, logger)
+	require.NoError(t, err)
+
+	c := &backupReconciler{
+		logger:                        logger,
+		discoveryHelper:               discoveryHelper,
+		kbClient:                      fakeClient,
+		clock:                         &clock.RealClock{},
+		formatFlag:                    formatFlag,
+		defaultBackupLocation:         "loc-1",
+		globalVolumePoliciesConfigMap: "global-volume-policy",
+	}
+
+	backup := defaultBackup().StorageLocation("loc-1").Result()
+	res := c.prepareBackupRequest(ctx, backup, logger)
+	defer res.WorkerPool.Stop()
+
+	// The global volume policies must load cleanly (no policy-related validation error).
+	for _, e := range res.Status.ValidationErrors {
+		assert.NotContains(t, e, "global backup volume policies")
+	}
+	require.NotNil(t, res.ResPolicies)
+	assert.Equal(t, "global-volume-policy", res.Annotations[velerov1api.GlobalBackupVolumePolicyConfigMapAnnotation])
+
+	action, err := res.ResPolicies.GetMatchAction(resourcepolicies.VolumeFilterData{
+		PersistentVolume: &corev1api.PersistentVolume{Spec: corev1api.PersistentVolumeSpec{StorageClassName: "gp2"}},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, action)
+	assert.Equal(t, resourcepolicies.Skip, action.Type)
+}
+
+// TestPrepareBackupRequest_GlobalVolumePolicies_LoadError verifies that when the configured
+// global backup volume policies ConfigMap cannot be loaded, a validation error is recorded and
+// the contributing-ConfigMap annotation is not set on the backup.
+func TestPrepareBackupRequest_GlobalVolumePolicies_LoadError(t *testing.T) {
+	formatFlag := logging.FormatText
+	logger := logging.DefaultLogger(logrus.DebugLevel, formatFlag)
+
+	// No ConfigMap with this name exists, so loading the global policies fails.
+	fakeClient := velerotest.NewFakeControllerRuntimeClient(t,
+		builder.ForBackupStorageLocation(velerov1api.DefaultNamespace, "loc-1").Result())
+	apiServer := velerotest.NewAPIServer(t)
+	discoveryHelper, err := discovery.NewHelper(apiServer.DiscoveryClient, logger)
+	require.NoError(t, err)
+
+	c := &backupReconciler{
+		logger:                        logger,
+		discoveryHelper:               discoveryHelper,
+		kbClient:                      fakeClient,
+		clock:                         &clock.RealClock{},
+		formatFlag:                    formatFlag,
+		defaultBackupLocation:         "loc-1",
+		globalVolumePoliciesConfigMap: "missing-global-volume-policy",
+	}
+
+	backup := defaultBackup().StorageLocation("loc-1").Result()
+	res := c.prepareBackupRequest(ctx, backup, logger)
+	defer res.WorkerPool.Stop()
+
+	// The failure to load the global policies must surface as a validation error.
+	var hasGlobalPolicyError bool
+	for _, e := range res.Status.ValidationErrors {
+		if strings.Contains(e, "global backup volume policies") {
+			hasGlobalPolicyError = true
+		}
+	}
+	assert.True(t, hasGlobalPolicyError, "expected a validation error about global backup volume policies, got: %v", res.Status.ValidationErrors)
+	// The annotation is only set when the policies load successfully.
+	assert.Empty(t, res.Annotations[velerov1api.GlobalBackupVolumePolicyConfigMapAnnotation])
 }
 
 // TestPrepareBackupRequest_ClusterScopedFilterPolicyIncompatibleWithOldFilters verifies

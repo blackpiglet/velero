@@ -57,6 +57,7 @@ import (
 
 	"github.com/vmware-tanzu/velero/internal/credentials"
 	"github.com/vmware-tanzu/velero/internal/hook"
+	"github.com/vmware-tanzu/velero/internal/resourcepolicies"
 	"github.com/vmware-tanzu/velero/internal/storage"
 	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	velerov2alpha1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v2alpha1"
@@ -390,6 +391,14 @@ func (s *server) setupBeforeControllerRun() error {
 	if err := setDefaultBackupLocation(s.ctx, client, s.namespace, s.config.DefaultBackupLocation, s.logger); err != nil {
 		return err
 	}
+
+	// Validate the global backup volume policies ConfigMap early, so misconfigurations fail fast.
+	if s.config.GlobalBackupVolumePoliciesConfigMap != "" {
+		if _, err := resourcepolicies.GetGlobalResourcePolicies(client, s.namespace, s.config.GlobalBackupVolumePoliciesConfigMap, s.logger); err != nil {
+			return err
+		}
+		s.logger.WithField("configmap", s.config.GlobalBackupVolumePoliciesConfigMap).Info("Loaded global backup volume policies")
+	}
 	return nil
 }
 
@@ -671,6 +680,7 @@ func (s *server) runControllers(defaultVolumeSnapshotLocations map[string]string
 			s.config.ItemBlockWorkerCount,
 			s.config.ConcurrentBackups,
 			s.crClient,
+			s.config.GlobalBackupVolumePoliciesConfigMap,
 		).SetupWithManager(s.mgr); err != nil {
 			s.logger.Fatal(err, "unable to create controller", "controller", constant.ControllerBackup)
 		}

@@ -704,3 +704,85 @@ volumePolicies:
 3. The outcome would be that velero would perform `fs-backup` operation on both the volumes
    - `fs-backup` on `Volume 1` because `Volume 1` satisfies the criteria for `fs-backup` action. 
    - Also, for Volume 2 as no matching action was found so legacy approach will be used as a fallback option for this volume (`fs-backup` operation will be done as `defaultVolumesToFSBackup: true` is specified by the user).
+
+### Global backup volume policies
+
+Resource policies (volume policies) are normally opt-in per backup via `--resource-policies-configmap`. An administrator can instead configure a cluster-wide baseline that applies to **every** backup by starting the Velero server with the `--global-backup-volume-policies-configmap` flag, pointing at a ConfigMap in the Velero install namespace:
+
+```bash
+velero server --global-backup-volume-policies-configmap global-volume-policy
+```
+
+The ConfigMap uses the exact same format as a per-backup resource policies ConfigMap (a single data key holding a `ResourcePolicies` YAML document):
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: global-volume-policy
+  namespace: velero
+data:
+  policies.yaml: |
+    version: v1
+    volumePolicies:
+      - conditions:
+          storageClass:
+            - gp2
+        action:
+          type: skip
+```
+
+#### Behavior
+
+- **Only `volumePolicies` apply globally.** If the global ConfigMap contains `includeExcludePolicy`, `clusterScopedFilterPolicy`, or `namespacedFilterPolicies`, those sections are ignored and a warning is logged. Those filters are tied to a specific backup use case, so they remain per-backup only.
+- **Merge semantics.** When a backup runs, the effective `volumePolicies` list is the backup-level policies followed by the global policies:
+
+  ```
+  merged.volumePolicies = backup.volumePolicies ++ global.volumePolicies
+  ```
+
+  Because the first matching policy wins, a backup can override the global baseline for a specific volume while still inheriting every global rule it does not override. If a backup references no resource policy, the global policy applies on its own.
+- **Validation.** The global ConfigMap is validated at server startup (the server fails to start if it is missing or invalid) and again on each backup (a backup whose global policy has become missing or invalid is moved to the `FailedValidation` phase).
+
+#### Example
+
+Global policy (`--global-backup-volume-policies-configmap=global-volume-policy`): skip `gp2` volumes.
+
+```yaml
+version: v1
+volumePolicies:
+  - conditions:
+      storageClass:
+        - gp2
+    action:
+      type: skip
+```
+
+Backup-level policy (`--resource-policies-configmap backup01`): `fs-backup` NFS volumes.
+
+```yaml
+version: v1
+volumePolicies:
+  - conditions:
+      nfs: {}
+    action:
+      type: fs-backup
+```
+
+Effective (merged) policy used for the backup — backup rules first, then global:
+
+```yaml
+version: v1
+volumePolicies:
+  - conditions:
+      nfs: {}
+    action:
+      type: fs-backup
+  - conditions:
+      storageClass:
+        - gp2
+    action:
+      type: skip
+```
+
+When a global policy contributes to a backup, `velero backup describe` surfaces the contributing ConfigMap under a `Global volume policies` section.
