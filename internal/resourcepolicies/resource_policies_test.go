@@ -16,6 +16,7 @@ limitations under the License.
 package resourcepolicies
 
 import (
+	"context"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -24,6 +25,8 @@ import (
 	corev1api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	velerotest "github.com/vmware-tanzu/velero/pkg/test"
@@ -207,6 +210,18 @@ volumePolicies:
 volumePolicies:
   - conditions:
       pvcAccessModes: ReadWriteOnce
+    action:
+      type: skip
+`,
+			wantErr: true,
+		},
+		{
+			name: "error format of pvcAccessModes (list with non-string)",
+			yamlData: `version: v1
+volumePolicies:
+  - conditions:
+      pvcAccessModes:
+        - 123
     action:
       type: skip
 `,
@@ -407,14 +422,20 @@ func TestGetResourceMatchedAction(t *testing.T) {
 }
 
 func TestGetResourcePoliciesFromConfig(t *testing.T) {
-	// Create a test ConfigMap
-	cm := &corev1api.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-configmap",
-			Namespace: "test-namespace",
-		},
-		Data: map[string]string{
-			"test-data": `version: v1
+	testCases := []struct {
+		name        string
+		cm          *corev1api.ConfigMap
+		expectedErr string
+	}{
+		{
+			name: "valid configmap",
+			cm: &corev1api.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-configmap",
+					Namespace: "test-namespace",
+				},
+				Data: map[string]string{
+					"test-data": `version: v1
 volumePolicies:
   - conditions:
       capacity: '0,10Gi'
@@ -435,63 +456,457 @@ volumePolicies:
     action:
       type: skip
 `,
+				},
+			},
+			expectedErr: "",
+		},
+		{
+			name:        "nil configmap",
+			cm:          nil,
+			expectedErr: "could not parse config from nil configmap",
+		},
+		{
+			name: "empty data configmap",
+			cm: &corev1api.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-configmap",
+					Namespace: "test-namespace",
+				},
+				Data: map[string]string{},
+			},
+			expectedErr: "illegal resource policies test-namespace/test-configmap configmap",
+		},
+		{
+			name: "multiple data configmap",
+			cm: &corev1api.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-configmap",
+					Namespace: "test-namespace",
+				},
+				Data: map[string]string{
+					"data1": "value1",
+					"data2": "value2",
+				},
+			},
+			expectedErr: "illegal resource policies test-namespace/test-configmap configmap",
+		},
+		{
+			name: "invalid yaml data",
+			cm: &corev1api.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-configmap",
+					Namespace: "test-namespace",
+				},
+				Data: map[string]string{
+					"test-data": `version: v1
+volumePolicies:
+  - conditions:
+      capacity: '0,10Gi'
+      csi:
+        driver: disks.csi.driver
+    action:
+      type: skip
+    invalid-key: value
+`,
+				},
+			},
+			expectedErr: "failed to decode yaml data into resource policies",
+		},
+		{
+			name: "build policy error",
+			cm: &corev1api.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-configmap",
+					Namespace: "test-namespace",
+				},
+				Data: map[string]string{
+					"test-data": `version: v1
+volumePolicies:
+  - conditions:
+      capacity: 'invalid-capacity'
+      csi:
+        driver: disks.csi.driver
+    action:
+      type: skip
+`,
+				},
+			},
+			expectedErr: "wrong format of Capacity invalid-capacity",
 		},
 	}
 
-	// Call the function and check for errors
-	resPolicies, err := getResourcePoliciesFromConfig(cm)
-	require.NoError(t, err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resPolicies, err := getResourcePoliciesFromConfig(tc.cm)
+			if tc.expectedErr == "" {
+				require.NoError(t, err)
+				assert.Equal(t, "v1", resPolicies.version)
+				assert.Len(t, resPolicies.volumePolicies, 3)
+			} else {
+				require.ErrorContains(t, err, tc.expectedErr)
+				assert.Nil(t, resPolicies)
+			}
+		})
+	}
+}
 
-	// Check that the returned resourcePolicies object contains the expected data
-	assert.Equal(t, "v1", resPolicies.version)
-
-	assert.Len(t, resPolicies.volumePolicies, 3)
-
-	policies := ResourcePolicies{
-		Version: "v1",
-		VolumePolicies: []VolumePolicy{
-			{
-				Conditions: map[string]any{
-					"capacity": "0,10Gi",
-					"csi": map[string]any{
-						"driver": "disks.csi.driver",
-					},
-				},
-				Action: Action{
-					Type: Skip,
-				},
-			},
-			{
-				Conditions: map[string]any{
-					"csi": map[string]any{
-						"driver":           "files.csi.driver",
-						"volumeAttributes": map[string]string{"protocol": "nfs"},
-					},
-				},
-				Action: Action{
-					Type: Skip,
-				},
-			},
-			{
-				Conditions: map[string]any{
-					"pvcLabels": map[string]string{
-						"environment": "production",
-					},
-				},
-				Action: Action{
-					Type: Skip,
-				},
-			},
+func TestGetResourcePoliciesFromBackup(t *testing.T) {
+	validCM := &corev1api.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-configmap",
+			Namespace: "test-namespace",
+		},
+		Data: map[string]string{
+			"test-data": `version: v1
+volumePolicies:
+  - conditions:
+      capacity: '0,10Gi'
+      csi:
+        driver: disks.csi.driver
+    action:
+      type: skip
+`,
 		},
 	}
 
-	p := &Policies{}
-	err = p.BuildPolicy(&policies)
-	if err != nil {
-		t.Fatalf("failed to build policy: %v", err)
+	invalidActionCM := &corev1api.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "invalid-action-configmap",
+			Namespace: "test-namespace",
+		},
+		Data: map[string]string{
+			"test-data": `version: v1
+volumePolicies:
+  - conditions:
+      capacity: '0,10Gi'
+      csi:
+        driver: disks.csi.driver
+    action:
+      type: invalid-action
+`,
+		},
 	}
 
-	assert.Equal(t, p, resPolicies)
+	invalidVersionCM := &corev1api.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "invalid-version-configmap",
+			Namespace: "test-namespace",
+		},
+		Data: map[string]string{
+			"test-data": `version: v2
+volumePolicies:
+  - conditions:
+      capacity: '0,10Gi'
+      csi:
+        driver: disks.csi.driver
+    action:
+      type: skip
+`,
+		},
+	}
+
+	emptyCM := &corev1api.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "empty-configmap",
+			Namespace: "test-namespace",
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(validCM, invalidActionCM, invalidVersionCM, emptyCM).Build()
+	logger := logrus.New()
+
+	testCases := []struct {
+		name        string
+		backup      velerov1api.Backup
+		expectedErr string
+	}{
+		{
+			name: "valid configmap",
+			backup: velerov1api.Backup{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Name:      "test-backup",
+				},
+				Spec: velerov1api.BackupSpec{
+					ResourcePolicy: &corev1api.TypedLocalObjectReference{
+						Kind: ConfigmapRefType,
+						Name: "test-configmap",
+					},
+				},
+			},
+			expectedErr: "",
+		},
+		{
+			name: "invalid kind",
+			backup: velerov1api.Backup{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Name:      "test-backup",
+				},
+				Spec: velerov1api.BackupSpec{
+					ResourcePolicy: &corev1api.TypedLocalObjectReference{
+						Kind: "Secret",
+						Name: "test-configmap",
+					},
+				},
+			},
+			expectedErr: "",
+		},
+		{
+			name: "configmap not found",
+			backup: velerov1api.Backup{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Name:      "test-backup",
+				},
+				Spec: velerov1api.BackupSpec{
+					ResourcePolicy: &corev1api.TypedLocalObjectReference{
+						Kind: ConfigmapRefType,
+						Name: "non-existent-configmap",
+					},
+				},
+			},
+			expectedErr: "fail to get ResourcePolicies test-namespace/non-existent-configmap ConfigMap",
+		},
+		{
+			name: "invalid action configmap",
+			backup: velerov1api.Backup{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Name:      "test-backup",
+				},
+				Spec: velerov1api.BackupSpec{
+					ResourcePolicy: &corev1api.TypedLocalObjectReference{
+						Kind: ConfigmapRefType,
+						Name: "invalid-action-configmap",
+					},
+				},
+			},
+			expectedErr: "fail to validate ResourcePolicies in ConfigMap test-namespace/test-backup",
+		},
+		{
+			name: "invalid version configmap",
+			backup: velerov1api.Backup{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Name:      "test-backup",
+				},
+				Spec: velerov1api.BackupSpec{
+					ResourcePolicy: &corev1api.TypedLocalObjectReference{
+						Kind: ConfigmapRefType,
+						Name: "invalid-version-configmap",
+					},
+				},
+			},
+			expectedErr: "fail to validate ResourcePolicies in ConfigMap test-namespace/test-backup",
+		},
+		{
+			name: "empty configmap",
+			backup: velerov1api.Backup{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Name:      "test-backup",
+				},
+				Spec: velerov1api.BackupSpec{
+					ResourcePolicy: &corev1api.TypedLocalObjectReference{
+						Kind: ConfigmapRefType,
+						Name: "empty-configmap",
+					},
+				},
+			},
+			expectedErr: "fail to read the ResourcePolicies from ConfigMap test-namespace/test-backup",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resPolicies, err := GetResourcePoliciesFromBackup(tc.backup, client, logger)
+			if tc.expectedErr == "" {
+				require.NoError(t, err)
+				if tc.backup.Spec.ResourcePolicy != nil && tc.backup.Spec.ResourcePolicy.Kind == ConfigmapRefType {
+					assert.NotNil(t, resPolicies)
+				} else {
+					assert.Nil(t, resPolicies)
+				}
+			} else {
+				require.ErrorContains(t, err, tc.expectedErr)
+				assert.Nil(t, resPolicies)
+			}
+		})
+	}
+}
+
+func TestGetResourcePoliciesFromRestore(t *testing.T) {
+	validCM := &corev1api.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-configmap",
+			Namespace: "test-namespace",
+		},
+		Data: map[string]string{
+			"test-data": `version: v1
+namespacedFilterPolicies:
+  - namespaces: ["default"]
+    resourceFilters:
+      - kinds: ["Pod"]
+`,
+		},
+	}
+
+	invalidNfpCM := &corev1api.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "invalid-action-configmap",
+			Namespace: "test-namespace",
+		},
+		Data: map[string]string{
+			"test-data": `version: v1
+namespacedFilterPolicies:
+  - namespaces: []
+    resourceFilters:
+      - kinds: ["Pod"]
+`,
+		},
+	}
+
+	invalidVersionCM := &corev1api.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "invalid-version-configmap",
+			Namespace: "test-namespace",
+		},
+		Data: map[string]string{
+			"test-data": `version: v2
+namespacedFilterPolicies:
+  - namespaces: ["default"]
+    resourceFilters:
+      - kinds: ["Pod"]
+`,
+		},
+	}
+
+	emptyCM := &corev1api.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "empty-configmap",
+			Namespace: "test-namespace",
+		},
+	}
+
+	client := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(validCM, invalidNfpCM, invalidVersionCM, emptyCM).Build()
+	logger := logrus.New()
+
+	testCases := []struct {
+		name        string
+		restore     *velerov1api.Restore
+		expectedErr string
+	}{
+		{
+			name: "valid configmap",
+			restore: &velerov1api.Restore{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Name:      "test-restore",
+				},
+				Spec: velerov1api.RestoreSpec{
+					ResourcePolicy: &corev1api.TypedLocalObjectReference{
+						Kind: ConfigmapRefType,
+						Name: "test-configmap",
+					},
+				},
+			},
+			expectedErr: "",
+		},
+		{
+			name: "invalid kind",
+			restore: &velerov1api.Restore{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Name:      "test-restore",
+				},
+				Spec: velerov1api.RestoreSpec{
+					ResourcePolicy: &corev1api.TypedLocalObjectReference{
+						Kind: "Secret",
+						Name: "test-configmap",
+					},
+				},
+			},
+			expectedErr: "invalid ResourcePolicy kind \"Secret\", only \"configmap\" is supported",
+		},
+		{
+			name: "configmap not found",
+			restore: &velerov1api.Restore{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Name:      "test-restore",
+				},
+				Spec: velerov1api.RestoreSpec{
+					ResourcePolicy: &corev1api.TypedLocalObjectReference{
+						Kind: ConfigmapRefType,
+						Name: "non-existent-configmap",
+					},
+				},
+			},
+			expectedErr: "fail to get ResourcePolicies test-namespace/non-existent-configmap ConfigMap",
+		},
+		{
+			name: "invalid action configmap",
+			restore: &velerov1api.Restore{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Name:      "test-restore",
+				},
+				Spec: velerov1api.RestoreSpec{
+					ResourcePolicy: &corev1api.TypedLocalObjectReference{
+						Kind: ConfigmapRefType,
+						Name: "invalid-action-configmap",
+					},
+				},
+			},
+			expectedErr: "fail to validate ResourcePolicies in ConfigMap test-namespace/invalid-action-configmap",
+		},
+		{
+			name: "invalid version configmap",
+			restore: &velerov1api.Restore{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Name:      "test-restore",
+				},
+				Spec: velerov1api.RestoreSpec{
+					ResourcePolicy: &corev1api.TypedLocalObjectReference{
+						Kind: ConfigmapRefType,
+						Name: "invalid-version-configmap",
+					},
+				},
+			},
+			expectedErr: "fail to validate ResourcePolicies in ConfigMap test-namespace/invalid-version-configmap",
+		},
+		{
+			name: "empty configmap",
+			restore: &velerov1api.Restore{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test-namespace",
+					Name:      "test-restore",
+				},
+				Spec: velerov1api.RestoreSpec{
+					ResourcePolicy: &corev1api.TypedLocalObjectReference{
+						Kind: ConfigmapRefType,
+						Name: "empty-configmap",
+					},
+				},
+			},
+			expectedErr: "fail to read the ResourcePolicies from ConfigMap test-namespace/empty-configmap",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resPolicies, err := GetResourcePoliciesFromRestore(context.Background(), tc.restore, client, logger)
+			if tc.expectedErr == "" {
+				require.NoError(t, err)
+				assert.NotNil(t, resPolicies)
+			} else {
+				require.ErrorContains(t, err, tc.expectedErr)
+				assert.Nil(t, resPolicies)
+			}
+		})
+	}
 }
 
 func TestGetMatchAction(t *testing.T) {
@@ -1789,6 +2204,17 @@ namespacedFilterPolicies:
 			errMsg:  "invalid glob pattern",
 		},
 		{
+			name: "invalid - bad glob pattern in excludedNames",
+			yamlData: `version: v1
+namespacedFilterPolicies:
+- namespaces: ["test"]
+  resourceFilters:
+  - kinds: ["Pod"]
+    excludedNames: ["[invalid"]`,
+			wantErr: true,
+			errMsg:  "invalid glob pattern",
+		},
+		{
 			name: "invalid - duplicate namespace pattern",
 			yamlData: `version: v1
 namespacedFilterPolicies:
@@ -1800,6 +2226,16 @@ namespacedFilterPolicies:
   - kinds: ["ConfigMap"]`,
 			wantErr: true,
 			errMsg:  "duplicate namespace pattern",
+		},
+		{
+			name: "invalid - bad namespace pattern",
+			yamlData: `version: v1
+namespacedFilterPolicies:
+- namespaces: ["prod**uction"]
+  resourceFilters:
+  - kinds: ["Pod"]`,
+			wantErr: true,
+			errMsg:  "wildcard pattern contains consecutive asterisks",
 		},
 	}
 
@@ -1855,6 +2291,50 @@ namespacedFilterPolicies:
 	rf := policy.ResourceFilters[0]
 	assert.Equal(t, []string{"Pod"}, rf.Kinds)
 	assert.Equal(t, map[string]string{"app": "web"}, rf.LabelSelector)
+}
+
+func TestClusterScopedFilterPoliciesAccessor(t *testing.T) {
+	yamlData := `version: v1
+clusterScopedFilterPolicy:
+  resourceFilters:
+  - kinds: ["ClusterRole"]
+    names: ["my-app-*"]`
+
+	resPolicies, err := unmarshalResourcePolicies(&yamlData)
+	require.NoError(t, err)
+
+	policies := &Policies{}
+	err = policies.BuildPolicy(resPolicies)
+	require.NoError(t, err)
+
+	csfPolicy := policies.GetClusterScopedFilterPolicy()
+	require.NotNil(t, csfPolicy)
+	assert.Len(t, csfPolicy.ResourceFilters, 1)
+
+	rf := csfPolicy.ResourceFilters[0]
+	assert.Equal(t, []string{"ClusterRole"}, rf.Kinds)
+	assert.Equal(t, []string{"my-app-*"}, rf.Names)
+}
+
+func TestIncludeExcludePolicyAccessor(t *testing.T) {
+	yamlData := `version: v1
+includeExcludePolicy:
+  includedClusterScopedResources:
+  - ClusterRole
+  excludedClusterScopedResources:
+  - ClusterRoleBinding`
+
+	resPolicies, err := unmarshalResourcePolicies(&yamlData)
+	require.NoError(t, err)
+
+	policies := &Policies{}
+	err = policies.BuildPolicy(resPolicies)
+	require.NoError(t, err)
+
+	iePolicy := policies.GetIncludeExcludePolicy()
+	require.NotNil(t, iePolicy)
+	assert.Equal(t, []string{"ClusterRole"}, iePolicy.IncludedClusterScopedResources)
+	assert.Equal(t, []string{"ClusterRoleBinding"}, iePolicy.ExcludedClusterScopedResources)
 }
 
 func TestFirstMatchSemantics(t *testing.T) {
