@@ -949,6 +949,7 @@ func (r *DataDownloadReconciler) setupExposeParam(dd *velerov2alpha1api.DataDown
 		PriorityClassName:     r.dataMovePriorityClass,
 		RestoreSize:           dd.Spec.SnapshotSize,
 		CacheVolume:           cacheVolume,
+		DataMover:             dd.Spec.DataMover,
 	}, nil
 }
 

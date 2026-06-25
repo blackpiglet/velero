@@ -33,6 +33,7 @@ import (
 	clientTesting "k8s.io/client-go/testing"
 
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	"github.com/vmware-tanzu/velero/pkg/datamover"
 	velerotest "github.com/vmware-tanzu/velero/pkg/test"
 	"github.com/vmware-tanzu/velero/pkg/util/kube"
 )
@@ -58,6 +59,18 @@ func TestRestoreExpose(t *testing.T) {
 		},
 		Spec: corev1api.PersistentVolumeClaimSpec{
 			StorageClassName: &scName,
+		},
+	}
+
+	modeFilesystem := corev1api.PersistentVolumeFilesystem
+	targetPVCObjWithVolumeMode := &corev1api.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "fake-ns",
+			Name:      "fake-target-pvc",
+		},
+		Spec: corev1api.PersistentVolumeClaimSpec{
+			StorageClassName: &scName,
+			VolumeMode:       &modeFilesystem,
 		},
 	}
 
@@ -107,6 +120,7 @@ func TestRestoreExpose(t *testing.T) {
 		targetNamespace string
 		kubeReactors    []reactor
 		cacheVolume     *CacheConfigs
+		dataMover       string
 		expectBackupPod bool
 		expectBackupPVC bool
 		expectCachePVC  bool
@@ -236,6 +250,34 @@ func TestRestoreExpose(t *testing.T) {
 			expectBackupPVC: true,
 			expectCachePVC:  true,
 		},
+		{
+			name:            "succeed with velero-block data mover",
+			targetPVCName:   "fake-target-pvc",
+			targetNamespace: "fake-ns",
+			ownerRestore:    restore,
+			kubeClientObj: []runtime.Object{
+				targetPVCObj,
+				daemonSet,
+				storageClass,
+			},
+			dataMover:       datamover.DataMoverTypeVeleroBlock,
+			expectBackupPod: true,
+			expectBackupPVC: true,
+		},
+		{
+			name:            "succeed with velero-block data mover and existing volume mode",
+			targetPVCName:   "fake-target-pvc",
+			targetNamespace: "fake-ns",
+			ownerRestore:    restore,
+			kubeClientObj: []runtime.Object{
+				targetPVCObjWithVolumeMode,
+				daemonSet,
+				storageClass,
+			},
+			dataMover:       datamover.DataMoverTypeVeleroBlock,
+			expectBackupPod: true,
+			expectBackupPVC: true,
+		},
 	}
 
 	for _, test := range tests {
@@ -273,6 +315,7 @@ func TestRestoreExpose(t *testing.T) {
 					ExposeTimeout:    time.Millisecond,
 					LoadAffinity:     nil,
 					CacheVolume:      test.cacheVolume,
+					DataMover:        test.dataMover,
 				},
 			)
 
@@ -289,9 +332,13 @@ func TestRestoreExpose(t *testing.T) {
 				require.True(t, apierrors.IsNotFound(err))
 			}
 
-			_, err = exposer.kubeClient.CoreV1().PersistentVolumeClaims(ownerObject.Namespace).Get(t.Context(), ownerObject.Name, metav1.GetOptions{})
+			pvc, err := exposer.kubeClient.CoreV1().PersistentVolumeClaims(ownerObject.Namespace).Get(t.Context(), ownerObject.Name, metav1.GetOptions{})
 			if test.expectBackupPVC {
 				require.NoError(t, err)
+				if test.dataMover == datamover.DataMoverTypeVeleroBlock {
+					require.NotNil(t, pvc.Spec.VolumeMode)
+					require.Equal(t, corev1api.PersistentVolumeBlock, *pvc.Spec.VolumeMode)
+				}
 			} else {
 				require.True(t, apierrors.IsNotFound(err))
 			}
