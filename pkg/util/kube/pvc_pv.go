@@ -773,3 +773,19 @@ func GetVolumeTopology(ctx context.Context, volumeClient corev1client.CoreV1Inte
 
 	return pv.Spec.NodeAffinity.Required, nil
 }
+
+func GetVolumeModeByPVC(pvc *corev1api.PersistentVolumeClaim) corev1api.PersistentVolumeMode {
+	if pvc.Spec.VolumeMode != nil {
+		return *pvc.Spec.VolumeMode
+	}
+
+	return corev1api.PersistentVolumeFilesystem
+}
+
+func GetVolumeModeByPV(pv *corev1api.PersistentVolume) corev1api.PersistentVolumeMode {
+	if pv.Spec.VolumeMode != nil {
+		return *pv.Spec.VolumeMode
+	}
+
+	return corev1api.PersistentVolumeFilesystem
+}

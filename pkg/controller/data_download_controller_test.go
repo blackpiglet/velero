@@ -1429,6 +1429,7 @@ func TestDataDownloadSetupExposeParam(t *testing.T) {
 			// Core fields
 			assert.Equal(t, baseDataDownload.Spec.TargetVolume.PVC, got.TargetPVCName)
 			assert.Equal(t, baseDataDownload.Spec.TargetVolume.Namespace, got.TargetNamespace)
+			assert.Equal(t, baseDataDownload.Spec.DataMover, got.DataMover)
 
 			// Labels and Annotations
 			assert.Equal(t, tt.want.labels, got.HostingPodLabels)
