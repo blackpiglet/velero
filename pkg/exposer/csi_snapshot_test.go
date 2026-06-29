@@ -139,7 +139,7 @@ func TestExpose(t *testing.T) {
 		},
 	}
 
-	vscObjWithLabels := vscObj
+	vscObjWithLabels := vscObj.DeepCopy()
 	vscObjWithLabels.Labels = map[string]string{
 		"snapshot.storage.kubernetes.io/managed-by": "worker",
 	}
@@ -1065,14 +1065,28 @@ func TestExpose(t *testing.T) {
 
 				assert.Equal(t, vsObject.Annotations, backupVS.Annotations)
 				assert.Equal(t, *vsObject.Spec.VolumeSnapshotClassName, *backupVS.Spec.VolumeSnapshotClassName)
-				assert.Equal(t, *backupVS.Spec.Source.VolumeSnapshotContentName, backupVSC.Name)
+				assert.Equal(t, backupVSC.Name, *backupVS.Spec.Source.VolumeSnapshotContentName)
 
 				anno := make(map[string]string)
 				maps.Copy(anno, vscObj.Annotations)
 				anno[kube.KubeAnnAllowVolumeModeChange] = "true"
 
 				assert.Equal(t, anno, backupVSC.Annotations)
-				assert.Equal(t, vscObj.Labels, backupVSC.Labels)
+
+				// Compute expected VSC labels: only the managed-by label is selectively
+				// copied from the source VSC to the backup VSC.
+				var srcVSCLabels map[string]string
+				for _, obj := range test.snapshotClientObj {
+					if vsc, ok := obj.(*snapshotv1api.VolumeSnapshotContent); ok {
+						srcVSCLabels = vsc.Labels
+					}
+				}
+				expectedVSCLabels := map[string]string{}
+				if v, ok := srcVSCLabels[kube.VolumeSnapshotContentManagedByLabel]; ok {
+					expectedVSCLabels[kube.VolumeSnapshotContentManagedByLabel] = v
+				}
+				assert.Equal(t, expectedVSCLabels, backupVSC.Labels)
+
 				assert.Equal(t, vscObj.Spec.DeletionPolicy, backupVSC.Spec.DeletionPolicy)
 				assert.Equal(t, vscObj.Spec.Driver, backupVSC.Spec.Driver)
 				assert.Equal(t, *vscObj.Spec.VolumeSnapshotClassName, *backupVSC.Spec.VolumeSnapshotClassName)
