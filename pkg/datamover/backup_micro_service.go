@@ -19,6 +19,7 @@ package datamover
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -200,6 +201,13 @@ func (r *BackupMicroService) RunCancelableDataPath(ctx context.Context) (string,
 		velerov1api.AsyncOperationIDLabel: du.Labels[velerov1api.AsyncOperationIDLabel],
 	}
 
+	snapshotID := ""
+	if du.Spec.CSISnapshot != nil {
+		snapshotID = du.Spec.CSISnapshot.VolumeSnapshot
+	} else {
+		return "", fmt.Errorf("du %s's spec.CSISnapshot is nil", du.Name)
+	}
+
 	if err := dp.StartBackup(r.sourceTargetPath, du.Spec.DataMoverConfig, &datapath.BackupStartParam{
 		RealSource:     GetRealSource(du.Spec.SourceNamespace, du.Spec.SourcePVC),
 		ParentSnapshot: "",
@@ -207,7 +215,7 @@ func (r *BackupMicroService) RunCancelableDataPath(ctx context.Context) (string,
 		Tags:           tags,
 		CBTVolumeID:    r.cbtVolumeID,
 		CBTChangeID:    r.cbtChangeID,
-		SnapshotID:     du.Spec.CSISnapshot.VolumeSnapshot,
+		SnapshotID:     snapshotID,
 	}); err != nil {
 		return "", errors.Wrap(err, "error starting data path backup")
 	}
@@ -258,7 +266,7 @@ func (r *BackupMicroService) OnDataUploadCompleted(ctx context.Context, namespac
 			err: errors.Wrapf(err, "Failed to marshal backup result %v", result.Backup),
 		}
 	} else {
-		r.eventRecorder.Event(r.dataUpload, false, datapath.EventReasonCompleted, string(backupBytes))
+		r.eventRecorder.Event(r.dataUpload, false, datapath.EventReasonCompleted, "%s", string(backupBytes))
 		r.resultSignal <- dataPathResult{
 			result: string(backupBytes),
 		}
@@ -298,7 +306,7 @@ func (r *BackupMicroService) OnDataUploadProgress(ctx context.Context, namespace
 		return
 	}
 
-	r.eventRecorder.Event(r.dataUpload, false, datapath.EventReasonProgress, string(progressBytes))
+	r.eventRecorder.Event(r.dataUpload, false, datapath.EventReasonProgress, "%s", string(progressBytes))
 }
 
 func (r *BackupMicroService) closeDataPath(ctx context.Context, duName string) {

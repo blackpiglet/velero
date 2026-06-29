@@ -228,7 +228,7 @@ func (r *RestoreMicroService) OnDataDownloadCompleted(ctx context.Context, names
 			err: errors.Wrapf(err, "Failed to marshal restore result %v", result.Restore),
 		}
 	} else {
-		r.eventRecorder.Event(r.dataDownload, false, datapath.EventReasonCompleted, string(restoreBytes))
+		r.eventRecorder.Event(r.dataDownload, false, datapath.EventReasonCompleted, "%s", string(restoreBytes))
 		r.resultSignal <- dataPathResult{
 			result: string(restoreBytes),
 		}
@@ -268,7 +268,7 @@ func (r *RestoreMicroService) OnDataDownloadProgress(ctx context.Context, namesp
 		return
 	}
 
-	r.eventRecorder.Event(r.dataDownload, false, datapath.EventReasonProgress, string(progressBytes))
+	r.eventRecorder.Event(r.dataDownload, false, datapath.EventReasonProgress, "%s", string(progressBytes))
 }
 
 func (r *RestoreMicroService) closeDataPath(ctx context.Context, ddName string) {

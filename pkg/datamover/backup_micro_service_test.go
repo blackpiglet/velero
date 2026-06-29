@@ -102,6 +102,7 @@ func TestOnDataUploadFailed(t *testing.T) {
 
 	bs := &BackupMicroService{
 		dataUploadName: dataUploadName,
+		dataUpload:     builder.ForDataUpload(velerov1api.DefaultNamespace, dataUploadName).Result(),
 		dataPathMgr:    datapath.NewManager(1),
 		eventRecorder:  bt,
 		resultSignal:   make(chan dataPathResult),
@@ -126,6 +127,7 @@ func TestOnDataUploadCancelled(t *testing.T) {
 
 	bs := &BackupMicroService{
 		dataUploadName: dataUploadName,
+		dataUpload:     builder.ForDataUpload(velerov1api.DefaultNamespace, dataUploadName).Result(),
 		dataPathMgr:    datapath.NewManager(1),
 		eventRecorder:  bt,
 		resultSignal:   make(chan dataPathResult),
@@ -176,10 +178,12 @@ func TestOnDataUploadCompleted(t *testing.T) {
 			}
 
 			bs := &BackupMicroService{
-				dataPathMgr:   datapath.NewManager(1),
-				eventRecorder: bt,
-				resultSignal:  make(chan dataPathResult),
-				logger:        velerotest.NewLogger(),
+				dataUploadName: dataUploadName,
+				dataUpload:     builder.ForDataUpload(velerov1api.DefaultNamespace, dataUploadName).Result(),
+				dataPathMgr:    datapath.NewManager(1),
+				eventRecorder:  bt,
+				resultSignal:   make(chan dataPathResult),
+				logger:         velerotest.NewLogger(),
 			}
 
 			funcMarshal = bt.Marshal
@@ -230,9 +234,11 @@ func TestOnDataUploadProgress(t *testing.T) {
 			}
 
 			bs := &BackupMicroService{
-				dataPathMgr:   datapath.NewManager(1),
-				eventRecorder: bt,
-				logger:        velerotest.NewLogger(),
+				dataUploadName: dataUploadName,
+				dataUpload:     builder.ForDataUpload(velerov1api.DefaultNamespace, dataUploadName).Result(),
+				dataPathMgr:    datapath.NewManager(1),
+				eventRecorder:  bt,
+				logger:         velerotest.NewLogger(),
 			}
 
 			funcMarshal = bt.Marshal
@@ -294,7 +300,11 @@ func TestCancelDataUpload(t *testing.T) {
 func TestRunCancelableDataPath(t *testing.T) {
 	dataUploadName := "fake-data-upload"
 	du := builder.ForDataUpload(velerov1api.DefaultNamespace, dataUploadName).Phase(velerov2alpha1api.DataUploadPhaseNew).Result()
+	du.Spec.CSISnapshot = &velerov2alpha1api.CSISnapshotSpec{VolumeSnapshot: "fake-snapshot"}
+
 	duInProgress := builder.ForDataUpload(velerov1api.DefaultNamespace, dataUploadName).Phase(velerov2alpha1api.DataUploadPhaseInProgress).Result()
+	duInProgress.Spec.CSISnapshot = &velerov2alpha1api.CSISnapshotSpec{VolumeSnapshot: "fake-snapshot"}
+
 	ctxTimeout, cancel := context.WithTimeout(t.Context(), time.Second)
 
 	tests := []struct {

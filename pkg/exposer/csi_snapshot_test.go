@@ -2080,10 +2080,10 @@ func TestGetCBTInfo(t *testing.T) {
 			cbtInfo, err := exposer.getCBTInfo(context.TODO(), tc.vs, tc.sourcePVName)
 
 			if tc.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tc.expectedInfo, cbtInfo)
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedInfo, cbtInfo)
 			}
 		})
 	}

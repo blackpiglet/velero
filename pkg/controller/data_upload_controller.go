@@ -475,6 +475,9 @@ func (r *DataUploadReconciler) updateDataUploadStatus(ctx context.Context, du *v
 		vs.Annotations[util.VSphereCNSSnapshotAnno] != "" {
 		cbtStatus.ChangeID = vs.Annotations[util.VSphereCNSChangeIDAnno]
 		cbtStatus.VolumeID = strings.Split(vs.Annotations[util.VSphereCNSSnapshotAnno], "+")[0]
+
+		r.logger.Debugf("VKS CBT: ChangID %s VolumeID %s",
+			cbtStatus.ChangeID, cbtStatus.VolumeID)
 	} else {
 		pvc := &corev1api.PersistentVolumeClaim{}
 		if err := r.client.Get(ctx, types.NamespacedName{Namespace: du.Spec.SourceNamespace, Name: du.Spec.SourcePVC}, pvc); err != nil {
@@ -488,9 +491,12 @@ func (r *DataUploadReconciler) updateDataUploadStatus(ctx context.Context, du *v
 
 		cbtStatus.ChangeID = vs.Name
 		cbtStatus.VolumeID = pv.Spec.CSI.VolumeHandle
+
+		r.logger.Debugf("Vanilla CBT: ChangeID %s VolumeID %s",
+			cbtStatus.ChangeID, cbtStatus.VolumeID)
 	}
 
-	UpdateDataUploadWithRetry(
+	if err := UpdateDataUploadWithRetry(
 		ctx,
 		r.client,
 		types.NamespacedName{Namespace: du.Namespace, Name: du.Name},
@@ -502,7 +508,9 @@ func (r *DataUploadReconciler) updateDataUploadStatus(ctx context.Context, du *v
 
 			return true
 		},
-	)
+	); err != nil {
+		return fmt.Errorf("error updating data upload %s status: %w", du.Namespace+"/"+du.Name, err)
+	}
 
 	return nil
 }
