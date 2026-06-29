@@ -60,6 +60,8 @@ func DescribeBackupInSF(
 			DescribeFineGrainedFilterPoliciesInSF(ctx, kbClient, d, backup)
 		}
 
+		DescribeGlobalVolumePolicyInSF(d, backup)
+
 		status := backup.Status
 		if len(status.ValidationErrors) > 0 {
 			d.Describe("validationErrors", status.ValidationErrors)
@@ -697,6 +699,19 @@ func DescribeResourcePoliciesInSF(d *StructuredDescriber, resPolicies *corev1api
 	policiesInfo["type"] = resPolicies.Kind
 	policiesInfo["name"] = resPolicies.Name
 	d.Describe("resourcePolicies", policiesInfo)
+}
+
+// DescribeGlobalVolumePolicyInSF describes the global backup volume policies ConfigMap that
+// contributed to the backup, if any, in structured format.
+func DescribeGlobalVolumePolicyInSF(d *StructuredDescriber, backup *velerov1api.Backup) {
+	name := backup.Annotations[velerov1api.GlobalBackupVolumePolicyConfigMapAnnotation]
+	if name == "" {
+		return
+	}
+	d.Describe("globalVolumePolicies", map[string]any{
+		"type": resourcepolicies.ConfigmapRefType,
+		"name": name,
+	})
 }
 
 func describeResultInSF(m map[string]any, result results.Result) {
