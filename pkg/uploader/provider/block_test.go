@@ -224,7 +224,7 @@ func TestBlockProviderRunBackup(t *testing.T) {
 			path:           "/dev/sda",
 			updater:        nil,
 			expectError:    true,
-			expectedErrStr: "Need to initial backup progress updater first",
+			expectedErrStr: "backup progress updater is invalid",
 			skipMock:       true,
 		},
 		{
@@ -385,6 +385,12 @@ func TestBlockProviderRunRestore(t *testing.T) {
 		expectedErrStr  string
 		checkCaptures   func(*testing.T, string, string)
 	}{
+		{
+			name:           "nil updater returns error",
+			updater:        nil,
+			expectError:    true,
+			expectedErrStr: "restore progress updater is invalid",
+		},
 		{
 			name:            "success returns size and updates progress",
 			snapshotID:      "snap-001",

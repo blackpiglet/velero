@@ -105,7 +105,7 @@ func (bp *blockProvider) RunBackup(
 	uploaderCfg map[string]string,
 	updater uploader.ProgressUpdater) (string, bool, int64, int64, error) {
 	if updater == nil {
-		return "", false, 0, 0, errors.New("Need to initial backup progress updater first")
+		return "", false, 0, 0, errors.New("backup progress updater is invalid")
 	}
 
 	if path == "" {
@@ -160,6 +160,10 @@ func (bp *blockProvider) RunRestore(
 	volMode uploader.PersistentVolumeMode,
 	uploaderCfg map[string]string,
 	updater uploader.ProgressUpdater) (int64, error) {
+	if updater == nil {
+		return 0, errors.New("restore progress updater is invalid")
+	}
+
 	log := bp.log.WithFields(logrus.Fields{
 		"snapshotID": snapshotID,
 		"volumePath": volumePath,
