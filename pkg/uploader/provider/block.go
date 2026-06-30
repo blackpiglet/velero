@@ -118,6 +118,8 @@ func (bp *blockProvider) RunBackup(
 		"parentSnapshot": parentSnapshot,
 	})
 
+	log.Infof("Run block backup, CBT source info: %v", cbtParam.Source)
+
 	blkUploader := block.NewUploader(ctx, bp.bkRepo, updater, log)
 
 	if tags == nil {
