@@ -41,6 +41,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/vmware-tanzu/crash-diagnostics v0.4.3
+	github.com/vmware-tanzu/velero/pkg/apis v0.0.0
 	go.uber.org/zap v1.28.0
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/mod v0.36.0
@@ -220,4 +221,7 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )
 
-replace github.com/kopia/kopia => github.com/project-velero/kopia v0.0.0-20260616052725-d83462d382c9
+replace (
+	github.com/kopia/kopia => github.com/project-velero/kopia v0.0.0-20260616052725-d83462d382c9
+	github.com/vmware-tanzu/velero/pkg/apis => ./pkg/apis
+)
