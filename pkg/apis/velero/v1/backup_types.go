@@ -184,6 +184,10 @@ type BackupSpec struct {
 	// +optional
 	// +nullable
 	UploaderConfig *UploaderConfigForBackup `json:"uploaderConfig,omitempty"`
+
+	// BackupType specifies the backup type of the DataUpload for, including full or incremental.
+	// +optional
+	BackupType BackupType `json:"backupType,omitempty"`
 }
 
 // UploaderConfigForBackup defines the configuration for the uploader when doing backup.
@@ -355,6 +359,15 @@ const (
 
 	// BackupPhaseDeleting means the backup and all its associated data are being deleted.
 	BackupPhaseDeleting BackupPhase = "Deleting"
+)
+
+// BackupType represents the backup type of a DataUpload, including full or incremental.
+// +kubebuilder:validation:Enum=Full;Incremental
+type BackupType string
+
+const (
+	BackupTypeFull        BackupType = "Full"
+	BackupTypeIncremental BackupType = "Incremental"
 )
 
 // BackupStatus captures the current status of a Velero backup.

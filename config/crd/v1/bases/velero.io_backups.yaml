@@ -41,6 +41,13 @@ spec:
           spec:
             description: BackupSpec defines the specification for a Velero backup.
             properties:
+              backupType:
+                description: BackupType specifies the backup type of the DataUpload
+                  for, including full or incremental.
+                enum:
+                - Full
+                - Incremental
+                type: string
               csiSnapshotTimeout:
                 description: |-
                   CSISnapshotTimeout specifies the time used to wait for CSI VolumeSnapshot status turns to
