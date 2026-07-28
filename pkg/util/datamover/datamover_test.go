@@ -122,3 +122,37 @@ func TestIsBlockDataMover(t *testing.T) {
 		})
 	}
 }
+
+func TestGetDataMoverFromDataDownload(t *testing.T) {
+	testcases := []struct {
+		name      string
+		dataMover string
+		want      string
+	}{
+		{
+			name:      "velero-block dataMover is velero-block",
+			dataMover: "velero-block",
+			want:      "velero-block",
+		},
+		{
+			name:      "velero-fs dataMover is velero-fs",
+			dataMover: "velero-fs",
+			want:      "velero-fs",
+		},
+		{
+			name:      "velero dataMover is velero-fs",
+			dataMover: "velero",
+			want:      "velero-fs",
+		},
+		{
+			name:      "empty dataMover is velero-fs",
+			dataMover: "",
+			want:      "velero-fs",
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(tt *testing.T) {
+			assert.Equal(tt, tc.want, GetDataMoverFromDataDownload(tc.dataMover))
+		})
+	}
+}

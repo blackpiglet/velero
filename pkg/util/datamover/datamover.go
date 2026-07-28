@@ -35,6 +35,7 @@ func IsBuiltInDataMover(dataMover string) bool {
 	return IsVeleroBlockDataMover(dataMover) || IsVeleroFSDataMover(dataMover)
 }
 
+// IsVeleroFSDataMover checks whether the given data mover belongs to fs type.
 func IsVeleroFSDataMover(dataMover string) bool {
 	if dataMover == "" || dataMover == DataMoverTypeVelero {
 		dataMover = DataMoverTypeVeleroFs
@@ -42,6 +43,7 @@ func IsVeleroFSDataMover(dataMover string) bool {
 	return dataMover == DataMoverTypeVeleroFs
 }
 
+// IsVeleroBlockDataMover checks whether the given data mover belongs to block type.
 func IsVeleroBlockDataMover(dataMover string) bool {
 	return dataMover == DataMoverTypeVeleroBlock
 }
@@ -51,4 +53,17 @@ func IsVeleroBlockDataMover(dataMover string) bool {
 // between releases; currently it is the file system data mover.
 func GetDefaultBuiltInDataMover() string {
 	return DataMoverTypeVeleroFs
+}
+
+// GetDataMoverFromDataDownload determines the dataMover to use from a DataDownload.
+// It defaults to the current release's Default DataMover if spec.DataMover is empty ("") or "velero".
+// Otherwise, it returns the specified dataMover without any changes.
+// This guarantees that DataUploads generated prior to release-1.19 remain fully compatible
+// with release-1.19.
+func GetDataMoverFromDataDownload(dataMover string) string {
+	if dataMover == "" || dataMover == DataMoverTypeVelero {
+		return GetDefaultBuiltInDataMover()
+	}
+
+	return dataMover
 }

@@ -35,6 +35,7 @@ import (
 	"github.com/vmware-tanzu/velero/pkg/datapath"
 	"github.com/vmware-tanzu/velero/pkg/repository"
 	"github.com/vmware-tanzu/velero/pkg/uploader"
+	"github.com/vmware-tanzu/velero/pkg/util/datamover"
 	"github.com/vmware-tanzu/velero/pkg/util/kube"
 
 	cachetool "k8s.io/client-go/tools/cache"
@@ -165,11 +166,14 @@ func (r *RestoreMicroService) RunCancelableDataPath(ctx context.Context) (string
 	}
 
 	log.Debug("Found volume path")
+
+	dataMover := datamover.GetDataMoverFromDataDownload(dd.Spec.DataMover)
+
 	if err := dp.Init(ctx,
 		&datapath.InitParam{
 			BSLName:           dd.Spec.BackupStorageLocation,
 			SourceNamespace:   dd.Spec.SourceNamespace,
-			UploaderType:      GetUploaderType(dd.Spec.DataMover),
+			UploaderType:      dataMover,
 			RepositoryType:    velerov1api.BackupRepositoryTypeKopia,
 			RepoIdentifier:    "",
 			RepositoryEnsurer: r.repoEnsurer,
