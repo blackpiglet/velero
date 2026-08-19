@@ -50,6 +50,7 @@ func ForPluginContainer(image string, pullPolicy corev1api.PullPolicy) *Containe
 // getName returns the 'name' component of a docker image that includes the entire string
 // except the registry name, and transforms the combined string into a DNS-1123 compatible name
 // that fits within the 63-character limit for Kubernetes container names.
+// It also includes the tag or digest of the image, converting invalid characters into '-'.
 func getName(image string) string {
 	slashIndex := strings.Index(image, "/")
 	slashCount := 0
@@ -64,28 +65,18 @@ func getName(image string) string {
 		start = slashIndex + 1
 	}
 
-	// If the image spec is by digest, remove the digest.
-	// If it is by tag, remove the tag.
-	// Otherwise (implicit :latest) leave it alone.
-	end := len(image)
-	atIndex := strings.LastIndex(image, "@")
-	if atIndex > 0 {
-		end = atIndex
-	} else {
-		colonIndex := strings.LastIndex(image, ":")
-		if colonIndex > 0 {
-			end = colonIndex
-		}
-	}
-
 	// https://github.com/distribution/distribution/blob/main/docs/spec/api.md#overview
 	// valid repository names match the regex [a-z0-9]+(?:[._-][a-z0-9]+)*
 	// image repository names can container [._] but [._] are not allowed in RFC-1123 labels.
-	// replace '/', '_' and '.' with '-'
+	// replace '/', '_', '.', '@', and ':' with '-'
 	re := strings.NewReplacer("/", "-",
 		"_", "-",
-		".", "-")
-	name := re.Replace(image[start:end])
+		".", "-",
+		"@", "-",
+		":", "-")
+	name := re.Replace(image[start:])
+	name = strings.ToLower(name)
+	name = strings.Trim(name, "-")
 
 	// Ensure the name doesn't exceed Kubernetes container name length limit
 	return label.GetValidName(name)

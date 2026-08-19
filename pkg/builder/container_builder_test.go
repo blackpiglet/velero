@@ -30,7 +30,7 @@ func TestGetName(t *testing.T) {
 		{
 			name:     "image name with registry hostname and tag",
 			image:    "gcr.io/my-repo/my-image:latest",
-			expected: "my-repo-my-image",
+			expected: "my-repo-my-image-latest",
 		},
 		{
 			name:     "image name with registry hostname, without tag",
@@ -40,7 +40,7 @@ func TestGetName(t *testing.T) {
 		{
 			name:     "image name without registry hostname, with tag",
 			image:    "my-repo/my-image:latest",
-			expected: "my-repo-my-image",
+			expected: "my-repo-my-image-latest",
 		},
 		{
 			name:     "image name without registry hostname, without tag",
@@ -50,7 +50,7 @@ func TestGetName(t *testing.T) {
 		{
 			name:     "image name with registry hostname and port, and tag",
 			image:    "mycustomregistry.io:8080/my-repo/my-image:latest",
-			expected: "my-repo-my-image",
+			expected: "my-repo-my-image-latest",
 		},
 		{
 			name:     "image name with no / in it",
@@ -80,17 +80,17 @@ func TestGetName(t *testing.T) {
 		{
 			name:     "image repository names containing _ ",
 			image:    "projects.registry.vmware.com/tanzu_migrator/route-2-httpproxy:myTag",
-			expected: "tanzu-migrator-route-2-httpproxy",
+			expected: "tanzu-migrator-route-2-httpproxy-mytag",
 		},
 		{
 			name:     "image repository names containing . ",
 			image:    "projects.registry.vmware.com/tanzu.migrator/route-2-httpproxy:myTag",
-			expected: "tanzu-migrator-route-2-httpproxy",
+			expected: "tanzu-migrator-route-2-httpproxy-mytag",
 		},
 		{
 			name:     "pull by digest",
 			image:    "quay.io/vmware-tanzu/velero@sha256:a75f9e8c3ced3943515f249597be389f8233e1258d289b11184796edceaa7dab",
-			expected: "vmware-tanzu-velero",
+			expected: "vmware-tanzu-velero-sha256-a75f9e8c3ced3943515f249597be387319ee",
 		},
 	}
 
@@ -123,10 +123,10 @@ func TestGetNameWithLongPaths(t *testing.T) {
 		},
 		{
 			name:  "plugin with normal path length (should remain unchanged)",
-			image: "arohcpsvcdev.azurecr.io/konveyor/velero-plugin-for-microsoft-azure@sha256:b2db5f09da514e817a74c992dcca5f90b77c2ab0b2797eba947d224271d6070e",
+			image: "arohcpsvcdev.azurecr.io/konveyor/velero-plugin-for-microsoft-azure:latest",
 			validate: func(t *testing.T, result string) {
 				t.Helper()
-				assert.Equal(t, "konveyor-velero-plugin-for-microsoft-azure", result)
+				assert.Equal(t, "konveyor-velero-plugin-for-microsoft-azure-latest", result)
 				assert.LessOrEqual(t, len(result), 63)
 			},
 		},
