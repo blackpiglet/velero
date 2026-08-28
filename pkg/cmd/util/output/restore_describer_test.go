@@ -309,11 +309,12 @@ CSI Snapshot Restores:
 					PVName:            "pv-3",
 					RestoreMethod:     volume.CSISnapshot,
 					SnapshotDataMoved: true,
-					SnapshotDataMovementInfo: &volume.SnapshotDataMovementInfo{
+					SnapshotDataMovementInfo: &volume.RestoreSnapshotDataMovementInfo{
 						OperationID:  "op-3",
 						DataMover:    "velero",
 						UploaderType: "kopia",
 						Size:         1234,
+						RestoreType:  "Incremental",
 					},
 				},
 			},
@@ -325,6 +326,7 @@ CSI Snapshot Restores:
       Operation ID: op-3
       Data Mover: velero
       Uploader Type: kopia
+      Restore Type: Incremental
 `,
 		},
 		{
@@ -336,7 +338,7 @@ CSI Snapshot Restores:
 					PVName:            "pv-3",
 					RestoreMethod:     volume.CSISnapshot,
 					SnapshotDataMoved: true,
-					SnapshotDataMovementInfo: &volume.SnapshotDataMovementInfo{
+					SnapshotDataMovementInfo: &volume.RestoreSnapshotDataMovementInfo{
 						OperationID:  "op-3",
 						DataMover:    "velero",
 						UploaderType: "kopia",

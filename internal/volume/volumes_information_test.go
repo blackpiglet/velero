@@ -562,8 +562,9 @@ func TestGenerateVolumeInfoFromPVB(t *testing.T) {
 					PVCNamespace: "",
 					PVName:       "",
 					BackupMethod: PodVolumeBackup,
+					BackupType:   velerov1api.BackupTypeIncremental,
 					Result:       VolumeResultFailed,
-					PVBInfo: &PodVolumeInfo{
+					PVBInfo: &PodVolumeBackupInfo{
 						PodName:      "testPod",
 						PodNamespace: "velero",
 					},
@@ -641,10 +642,11 @@ func TestGenerateVolumeInfoFromPVB(t *testing.T) {
 					PVCNamespace:        "velero",
 					PVName:              "testPV",
 					BackupMethod:        PodVolumeBackup,
+					BackupType:          velerov1api.BackupTypeIncremental,
 					StartTimestamp:      &now,
 					CompletionTimestamp: &now,
 					Result:              VolumeResultFailed,
-					PVBInfo: &PodVolumeInfo{
+					PVBInfo: &PodVolumeBackupInfo{
 						PodName:      "testPod",
 						PodNamespace: "velero",
 						Phase:        velerov1api.PodVolumeBackupPhaseFailed,
@@ -704,10 +706,11 @@ func TestGenerateVolumeInfoFromPVB(t *testing.T) {
 					PVCNamespace:        "velero",
 					PVName:              "testPV",
 					BackupMethod:        PodVolumeBackup,
+					BackupType:          velerov1api.BackupTypeIncremental,
 					StartTimestamp:      &now,
 					CompletionTimestamp: &now,
 					Result:              VolumeResultSucceeded,
-					PVBInfo: &PodVolumeInfo{
+					PVBInfo: &PodVolumeBackupInfo{
 						PodName:      "testPod",
 						PodNamespace: "velero",
 						Phase:        velerov1api.PodVolumeBackupPhaseCompleted,
@@ -887,6 +890,7 @@ func TestGenerateVolumeInfoFromDataUpload(t *testing.T) {
 					PVName:            "testPV",
 					BackupMethod:      CSISnapshot,
 					SnapshotDataMoved: true,
+					BackupType:        velerov1api.BackupTypeIncremental,
 					StartTimestamp:    &now,
 					CSISnapshotInfo: &CSISnapshotInfo{
 						VSCName:        FieldValueIsUnknown,
@@ -895,7 +899,7 @@ func TestGenerateVolumeInfoFromDataUpload(t *testing.T) {
 						Size:           0,
 						Driver:         "pd.csi.storage.gke.io",
 					},
-					SnapshotDataMovementInfo: &SnapshotDataMovementInfo{
+					SnapshotDataMovementInfo: &BackupSnapshotDataMovementInfo{
 						DataMover:    "velero",
 						UploaderType: "kopia",
 						OperationID:  "testOperation",
@@ -1057,7 +1061,7 @@ func TestRestoreVolumeInfoResult(t *testing.T) {
 					PVName:            "testPV2",
 					RestoreMethod:     PodVolumeRestore,
 					SnapshotDataMoved: false,
-					PVRInfo: &PodVolumeInfo{
+					PVRInfo: &PodVolumeRestoreInfo{
 						SnapshotHandle: "pvr-snap-001",
 						PodName:        "testPod",
 						PodNamespace:   "testNS",
@@ -1127,7 +1131,7 @@ func TestRestoreVolumeInfoResult(t *testing.T) {
 					PVName:            "testPV2",
 					RestoreMethod:     PodVolumeRestore,
 					SnapshotDataMoved: false,
-					PVRInfo: &PodVolumeInfo{
+					PVRInfo: &PodVolumeRestoreInfo{
 						SnapshotHandle: "pvr-snap-001",
 						PodName:        "testPod",
 						PodNamespace:   "testNS",
@@ -1202,7 +1206,7 @@ func TestRestoreVolumeInfoResult(t *testing.T) {
 					PVName:            "testPV",
 					RestoreMethod:     CSISnapshot,
 					SnapshotDataMoved: true,
-					SnapshotDataMovementInfo: &SnapshotDataMovementInfo{
+					SnapshotDataMovementInfo: &RestoreSnapshotDataMovementInfo{
 						DataMover:      "velero",
 						UploaderType:   velerov1api.BackupRepositoryTypeKopia,
 						SnapshotHandle: "dd-snap-001",
@@ -1215,7 +1219,7 @@ func TestRestoreVolumeInfoResult(t *testing.T) {
 					PVName:            "testPV2",
 					RestoreMethod:     CSISnapshot,
 					SnapshotDataMoved: true,
-					SnapshotDataMovementInfo: &SnapshotDataMovementInfo{
+					SnapshotDataMovementInfo: &RestoreSnapshotDataMovementInfo{
 						DataMover:      "velero",
 						UploaderType:   velerov1api.BackupRepositoryTypeKopia,
 						SnapshotHandle: "dd-snap-002",
