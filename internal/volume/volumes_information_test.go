@@ -17,6 +17,7 @@ limitations under the License.
 package volume
 
 import (
+	"encoding/json"
 	"sync"
 	"testing"
 
@@ -30,7 +31,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/ptr"
 
+	veleroshared "github.com/vmware-tanzu/velero/pkg/apis/velero/shared"
 	velerov1api "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	velerov2alpha1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v2alpha1"
 	"github.com/vmware-tanzu/velero/pkg/builder"
@@ -474,6 +477,7 @@ func TestGenerateVolumeInfoForCSIVolumeSnapshot(t *testing.T) {
 					PVCNamespace:          "velero",
 					PVName:                "testPV",
 					BackupMethod:          CSISnapshot,
+					Result:                VolumeResultSucceeded,
 					StartTimestamp:        &now,
 					PreserveLocalSnapshot: true,
 					CSISnapshotInfo: &CSISnapshotInfo{
@@ -841,6 +845,9 @@ func TestGenerateVolumeInfoFromDataUpload(t *testing.T) {
 					Driver:         "pd.csi.storage.gke.io",
 				}).SnapshotID("testSnapshotHandle").
 				StartTimestamp(&now).
+				CompletionTimestamp(&now).
+				TotalBytes(1024).
+				IncrementalBytes(512).
 				Phase(velerov2alpha1.DataUploadPhaseCompleted).
 				Result(),
 			vs:  builder.ForVolumeSnapshot(velerov1api.DefaultNamespace, "vs-01").Status().BoundVolumeSnapshotContentName("vsc-01").Result(),
@@ -885,13 +892,15 @@ func TestGenerateVolumeInfoFromDataUpload(t *testing.T) {
 			},
 			expectedVolumeInfos: []*BackupVolumeInfo{
 				{
-					PVCName:           "testPVC",
-					PVCNamespace:      "velero",
-					PVName:            "testPV",
-					BackupMethod:      CSISnapshot,
-					SnapshotDataMoved: true,
-					BackupType:        velerov1api.BackupTypeIncremental,
-					StartTimestamp:    &now,
+					PVCName:             "testPVC",
+					PVCNamespace:        "velero",
+					PVName:              "testPV",
+					BackupMethod:        CSISnapshot,
+					SnapshotDataMoved:   true,
+					BackupType:          velerov1api.BackupTypeIncremental,
+					Result:              VolumeResultSucceeded,
+					StartTimestamp:      &now,
+					CompletionTimestamp: &now,
 					CSISnapshotInfo: &CSISnapshotInfo{
 						VSCName:        FieldValueIsUnknown,
 						SnapshotHandle: FieldValueIsUnknown,
@@ -900,10 +909,13 @@ func TestGenerateVolumeInfoFromDataUpload(t *testing.T) {
 						Driver:         "pd.csi.storage.gke.io",
 					},
 					SnapshotDataMovementInfo: &BackupSnapshotDataMovementInfo{
-						DataMover:    "velero",
-						UploaderType: "kopia",
-						OperationID:  "testOperation",
-						Phase:        velerov2alpha1.DataUploadPhaseCompleted,
+						DataMover:       "velero",
+						UploaderType:    "kopia",
+						OperationID:     "testOperation",
+						Phase:           velerov2alpha1.DataUploadPhaseCompleted,
+						SnapshotHandle:  "testSnapshotHandle",
+						Size:            1024,
+						IncrementalSize: ptr.To(int64(512)),
 					},
 					PVInfo: &PVInfo{
 						ReclaimPolicy: string(corev1api.PersistentVolumeReclaimDelete),
@@ -951,6 +963,9 @@ func TestGenerateVolumeInfoFromDataUpload(t *testing.T) {
 				require.Equal(t, tc.expectedVolumeInfos[0].PVInfo, volumesInfo.volumeInfos[0].PVInfo)
 				require.Equal(t, tc.expectedVolumeInfos[0].SnapshotDataMovementInfo, volumesInfo.volumeInfos[0].SnapshotDataMovementInfo)
 				require.Equal(t, tc.expectedVolumeInfos[0].CSISnapshotInfo, volumesInfo.volumeInfos[0].CSISnapshotInfo)
+				require.Equal(t, tc.expectedVolumeInfos[0].Result, volumesInfo.volumeInfos[0].Result)
+				require.Equal(t, tc.expectedVolumeInfos[0].StartTimestamp, volumesInfo.volumeInfos[0].StartTimestamp)
+				require.Equal(t, tc.expectedVolumeInfos[0].CompletionTimestamp, volumesInfo.volumeInfos[0].CompletionTimestamp)
 			}
 		})
 	}
@@ -1186,6 +1201,9 @@ func TestRestoreVolumeInfoResult(t *testing.T) {
 								PVC:       "testPVC",
 								Namespace: "testNS",
 							}).
+							Phase(velerov2alpha1.DataDownloadPhaseCompleted).
+							Progress(veleroshared.DataMoveOperationProgress{TotalBytes: 2048}).
+							RestoreType("Incremental").
 							Result(),
 						*builder.ForDataDownload("velero", "testDataDownload-2").
 							ObjectMeta(builder.WithLabels(velerov1api.AsyncOperationIDLabel, "dd-operation-002")).
@@ -1194,6 +1212,9 @@ func TestRestoreVolumeInfoResult(t *testing.T) {
 								PVC:       "testPVC2",
 								Namespace: "testNS",
 							}).
+							Phase(velerov2alpha1.DataDownloadPhaseCompleted).
+							Progress(veleroshared.DataMoveOperationProgress{TotalBytes: 4096}).
+							RestoreType("Full").
 							Result(),
 					},
 				},
@@ -1211,6 +1232,9 @@ func TestRestoreVolumeInfoResult(t *testing.T) {
 						UploaderType:   velerov1api.BackupRepositoryTypeKopia,
 						SnapshotHandle: "dd-snap-001",
 						OperationID:    "dd-operation-001",
+						Phase:          velerov2alpha1.DataDownloadPhaseCompleted,
+						Size:           2048,
+						RestoreType:    "Incremental",
 					},
 				},
 				{
@@ -1224,6 +1248,9 @@ func TestRestoreVolumeInfoResult(t *testing.T) {
 						UploaderType:   velerov1api.BackupRepositoryTypeKopia,
 						SnapshotHandle: "dd-snap-002",
 						OperationID:    "dd-operation-002",
+						Phase:          velerov2alpha1.DataDownloadPhaseCompleted,
+						Size:           4096,
+						RestoreType:    "Full",
 					},
 				},
 			},
@@ -1265,4 +1292,175 @@ func TestGetVolumeSnapshotClasses(t *testing.T) {
 	result, err := volumesInfo.getVolumeSnapshotClasses()
 	require.NoError(t, err)
 	require.Equal(t, []snapshotv1api.VolumeSnapshotClass{*class}, result)
+}
+
+func TestBackupVolumeInfoJSONRoundTrip(t *testing.T) {
+	orig := BackupVolumeInfo{
+		PVCName:               "pvc-1",
+		PVCNamespace:          "ns-1",
+		PVName:                "pv-1",
+		BackupMethod:          CSISnapshot,
+		SnapshotDataMoved:     true,
+		PreserveLocalSnapshot: false,
+		Skipped:               false,
+		Result:                VolumeResultSucceeded,
+		BackupType:            velerov1api.BackupTypeIncremental,
+		CSISnapshotInfo: &CSISnapshotInfo{
+			SnapshotHandle:            "csi-snap-1",
+			Size:                      2000,
+			Driver:                    "csi.driver.com",
+			VSCName:                   "vsc-1",
+			OperationID:               "op-2",
+			VolumeGroupSnapshotHandle: "vgsh-1",
+		},
+		SnapshotDataMovementInfo: &BackupSnapshotDataMovementInfo{
+			DataMover:        "velero",
+			UploaderType:     "kopia",
+			RetainedSnapshot: "retain-1",
+			SnapshotHandle:   "snap-1",
+			OperationID:      "op-1",
+			Size:             1000,
+			IncrementalSize:  int64Ptr(200),
+			ParentSnapshot:   "parent-1",
+			Phase:            velerov2alpha1.DataUploadPhaseCompleted,
+		},
+		NativeSnapshotInfo: &NativeSnapshotInfo{
+			SnapshotHandle: "native-snap-1",
+			VolumeType:     "gp3",
+			VolumeAZ:       "us-west-2a",
+			IOPS:           "3000",
+		},
+		PVBInfo: &PodVolumeBackupInfo{
+			SnapshotHandle:  "pvb-snap-1",
+			Size:            500,
+			IncrementalSize: int64Ptr(50),
+			UploaderType:    "kopia",
+			VolumeName:      "vol-1",
+			PodName:         "pod-1",
+			PodNamespace:    "ns-1",
+			NodeName:        "node-1",
+			Phase:           velerov1api.PodVolumeBackupPhaseCompleted,
+		},
+		PVInfo: &PVInfo{
+			ReclaimPolicy: "Delete",
+			Labels:        map[string]string{"env": "test"},
+		},
+	}
+
+	data, err := json.Marshal(orig)
+	require.NoError(t, err)
+
+	jsonStr := string(data)
+	assert.Contains(t, jsonStr, `"pvcName":"pvc-1"`)
+	assert.Contains(t, jsonStr, `"pvcNamespace":"ns-1"`)
+	assert.Contains(t, jsonStr, `"pvName":"pv-1"`)
+	assert.Contains(t, jsonStr, `"backupMethod":"CSISnapshot"`)
+	assert.Contains(t, jsonStr, `"snapshotDataMoved":true`)
+	assert.Contains(t, jsonStr, `"result":"succeeded"`)
+	assert.Contains(t, jsonStr, `"backupType":"Incremental"`)
+	assert.Contains(t, jsonStr, `"snapshotDataMovementInfo":{`)
+	assert.Contains(t, jsonStr, `"dataMover":"velero"`)
+	assert.Contains(t, jsonStr, `"uploaderType":"kopia"`)
+	assert.Contains(t, jsonStr, `"retainedSnapshot":"retain-1"`)
+	assert.Contains(t, jsonStr, `"snapshotHandle":"snap-1"`)
+	assert.Contains(t, jsonStr, `"operationID":"op-1"`)
+	assert.Contains(t, jsonStr, `"size":1000`)
+	assert.Contains(t, jsonStr, `"incrementalSize":200`)
+	assert.Contains(t, jsonStr, `"parentSnapshot":"parent-1"`)
+	assert.Contains(t, jsonStr, `"phase":"Completed"`)
+	assert.Contains(t, jsonStr, `"pvbInfo":{`)
+	assert.Contains(t, jsonStr, `"podName":"pod-1"`)
+	assert.Contains(t, jsonStr, `"podNamespace":"ns-1"`)
+	assert.Contains(t, jsonStr, `"nodeName":"node-1"`)
+	assert.Contains(t, jsonStr, `"csiSnapshotInfo":{`)
+	assert.Contains(t, jsonStr, `"driver":"csi.driver.com"`)
+	assert.Contains(t, jsonStr, `"vscName":"vsc-1"`)
+	assert.Contains(t, jsonStr, `"volumeGroupSnapshotHandle":"vgsh-1"`)
+	assert.Contains(t, jsonStr, `"nativeSnapshotInfo":{`)
+	assert.Contains(t, jsonStr, `"volumeType":"gp3"`)
+	assert.Contains(t, jsonStr, `"volumeAZ":"us-west-2a"`)
+	assert.Contains(t, jsonStr, `"iops":"3000"`)
+	assert.Contains(t, jsonStr, `"pvInfo":{`)
+	assert.Contains(t, jsonStr, `"reclaimPolicy":"Delete"`)
+
+	var unmarshaled BackupVolumeInfo
+	err = json.Unmarshal(data, &unmarshaled)
+	require.NoError(t, err)
+	assert.Equal(t, orig, unmarshaled)
+}
+
+func TestRestoreVolumeInfoJSONRoundTrip(t *testing.T) {
+	orig := RestoreVolumeInfo{
+		PVCName:           "pvc-2",
+		PVCNamespace:      "ns-2",
+		PVName:            "pv-2",
+		RestoreMethod:     CSISnapshot,
+		SnapshotDataMoved: true,
+		SnapshotDataMovementInfo: &RestoreSnapshotDataMovementInfo{
+			DataMover:        "velero",
+			UploaderType:     "kopia",
+			RetainedSnapshot: "retain-2",
+			SnapshotHandle:   "snap-2",
+			OperationID:      "op-3",
+			Size:             3000,
+			IncrementalSize:  int64Ptr(300),
+			Phase:            velerov2alpha1.DataDownloadPhaseCompleted,
+			RestoreType:      "Incremental",
+		},
+		PVRInfo: &PodVolumeRestoreInfo{
+			SnapshotHandle:  "pvr-snap-1",
+			Size:            600,
+			IncrementalSize: int64Ptr(60),
+			UploaderType:    "kopia",
+			VolumeName:      "vol-2",
+			PodName:         "pod-2",
+			PodNamespace:    "ns-2",
+			NodeName:        "node-2",
+			Phase:           velerov1api.PodVolumeRestorePhaseCompleted,
+			RestoreType:     "Incremental",
+		},
+		CSISnapshotInfo: &CSISnapshotInfo{
+			SnapshotHandle: "csi-snap-2",
+			Size:           4000,
+			Driver:         "csi.driver.com",
+			VSCName:        "vsc-2",
+		},
+		NativeSnapshotInfo: &NativeSnapshotInfo{
+			SnapshotHandle: "native-snap-2",
+			VolumeType:     "ebs",
+			VolumeAZ:       "us-east-1a",
+			IOPS:           "1000",
+		},
+	}
+
+	data, err := json.Marshal(orig)
+	require.NoError(t, err)
+
+	jsonStr := string(data)
+	assert.Contains(t, jsonStr, `"pvcName":"pvc-2"`)
+	assert.Contains(t, jsonStr, `"pvcNamespace":"ns-2"`)
+	assert.Contains(t, jsonStr, `"pvName":"pv-2"`)
+	assert.Contains(t, jsonStr, `"restoreMethod":"CSISnapshot"`)
+	assert.Contains(t, jsonStr, `"snapshotDataMoved":true`)
+	assert.Contains(t, jsonStr, `"snapshotDataMovementInfo":{`)
+	assert.Contains(t, jsonStr, `"dataMover":"velero"`)
+	assert.Contains(t, jsonStr, `"uploaderType":"kopia"`)
+	assert.Contains(t, jsonStr, `"retainedSnapshot":"retain-2"`)
+	assert.Contains(t, jsonStr, `"snapshotHandle":"snap-2"`)
+	assert.Contains(t, jsonStr, `"operationID":"op-3"`)
+	assert.Contains(t, jsonStr, `"size":3000`)
+	assert.Contains(t, jsonStr, `"incrementalSize":300`)
+	assert.Contains(t, jsonStr, `"phase":"Completed"`)
+	assert.Contains(t, jsonStr, `"restoreType":"Incremental"`)
+	assert.Contains(t, jsonStr, `"pvrInfo":{`)
+	assert.Contains(t, jsonStr, `"podName":"pod-2"`)
+	assert.Contains(t, jsonStr, `"podNamespace":"ns-2"`)
+	assert.Contains(t, jsonStr, `"nodeName":"node-2"`)
+	assert.Contains(t, jsonStr, `"csiSnapshotInfo":{`)
+	assert.Contains(t, jsonStr, `"nativeSnapshotInfo":{`)
+
+	var unmarshaled RestoreVolumeInfo
+	err = json.Unmarshal(data, &unmarshaled)
+	require.NoError(t, err)
+	assert.Equal(t, orig, unmarshaled)
 }

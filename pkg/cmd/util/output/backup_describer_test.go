@@ -108,6 +108,7 @@ func TestDescribeBackupSpec(t *testing.T) {
 		TTL(72 * time.Hour).
 		CSISnapshotTimeout(10 * time.Minute).
 		DataMover("mover").
+		BackupType(velerov1api.BackupTypeFull).
 		Hooks(velerov1api.BackupHooks{
 			Resources: []velerov1api.BackupResourceHookSpec{
 				{
@@ -156,6 +157,7 @@ Storage Location:  backup-location
 Velero-Native Snapshot PVs:  auto
 Snapshot Move Data:          auto
 Data Mover:                  mover
+Backup Type:                 Full
 
 TTL:  72h0m0s
 

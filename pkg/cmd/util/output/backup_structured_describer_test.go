@@ -47,6 +47,7 @@ func TestDescribeBackupInSF(t *testing.T) {
 		TTL(72 * time.Hour).
 		CSISnapshotTimeout(10 * time.Minute).
 		DataMover("mover").
+		BackupType(velerov1api.BackupTypeFull).
 		Hooks(velerov1api.BackupHooks{
 			Resources: []velerov1api.BackupResourceHookSpec{
 				{
@@ -89,6 +90,7 @@ func TestDescribeBackupInSF(t *testing.T) {
 				"clusterScoped": "auto",
 			},
 			"dataMover":               "mover",
+			"backupType":              velerov1api.BackupTypeFull,
 			"labelSelector":           emptyDisplay,
 			"storageLocation":         "backup-location",
 			"veleroNativeSnapshotPVs": "auto",
